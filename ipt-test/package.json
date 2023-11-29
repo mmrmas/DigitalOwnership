@@ -1,0 +1,28 @@
+{
+  "name": "ipt-test",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "compile": "solcjs --abi --include-path node_modules/ --base-path . blockchain/contracts/1_IPToken.sol --output-dir blockchain/build"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0",
+    "bulma": "^0.9.4",
+    "next": "14.0.3",
+    "react": "^18",
+    "react-dom": "^18",
+    "solc": "^0.8.23-fixed",
+    "web3": "^4.2.2"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.0.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.0.3",
+    "postcss": "^8",
+    "tailwindcss": "^3.3.0"
+  }
+}
