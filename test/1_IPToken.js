@@ -67,8 +67,22 @@ describe("IPtoken contract", function () {
 
     it("Should set the blockReward to the argument provided during deployment", async function () {
       const blockReward = await ipToken.blockReward();
-      expect(Number(hre.ethers.formatEther(blockReward))).to.equal(tokenBlockReward);
+
+    
+      // Compare the string representations
+      expect(blockReward.toString()).to.equal(tokenBlockReward.toString());
+
+      // set to a differnt number
+      await ipToken.setBlockReward(130);
+      const blockReward_mofified = await ipToken.blockReward();
+      expect(blockReward_mofified.toString()).to.equal("130");
     });
+
+    it("Should fail if not owner", async function(){
+       // set to a differnt number
+       await expect(ipToken.connect(addr2).setBlockReward(130)).
+       to.be.revertedWith("Only the owner can call this function");
+    })
   });
 
 

@@ -1,5 +1,7 @@
 "use client";
 
+// need to reload after eth_sendTransaction
+
 import Head from "next/head";
 import { useState, useEffect } from "react";
 import Web3 from "web3";
@@ -7,19 +9,19 @@ import IPTContract from "../../../blockchain/iptest";
 import "bulma/css/bulma.css";
 import styles from "../../../styles/ipt.module.css";
 
-let web3;
-let accounts;
-
 const ipttest = () => {
   const [error, setError] = useState("");
   const [inventory, setInventory] = useState("");
   const [approveAddress, setApproveAddress] = useState("");
   const [approveAmount, setApproveAmount] = useState("");
   const [readApproval, setReadApproval] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [web3, setWeb3] = useState(null);
+  const [accounts, setAccounts] = useState([]);
 
   useEffect(() => {
-    getInventoryHandler();
-  });
+  getInventoryHandler();
+}, []);
 
   /* 
    =================== 0x4a845E3Af338Ec8ae3696a4f6cB786bCF0688a08 
@@ -41,8 +43,9 @@ const ipttest = () => {
       console.log(web3);
       console.log(accounts[0]);
       await window.ethereum.request({
-        method: "eth_sendTransaction",
-        params: [
+     
+        "method": "eth_sendTransaction",
+        "params": [
           {
             from: accounts[0], // specify the sender
             to: IPTContract.options.address,
@@ -102,14 +105,20 @@ const ipttest = () => {
       typeof window !== "undefined" &&
       typeof window.ethereum !== "undefined"
     ) {
-      try {
-        accounts = await window.ethereum.request({
+        let provider = window.ethereum;
+        // edge case if MM and CBW are both installed
+        if (window.ethereum.providers?.length) {
+          window.ethereum.providers.forEach(async (p) => {
+            if (p.isMetaMask) provider = p;
+          });
+        }
+        let accounts = await provider.request({
           method: "eth_requestAccounts",
+          params: [],
         });
-        web3 = new Web3(window.ethereum);
-      } catch (err) {
-        setError(err.message);
-      }
+      setAccounts(accounts);
+      let web3 = new Web3(window.ethereum);
+      setWeb3(web3);
       console.log("MetaMask is installed!");
     } else {
       //
@@ -131,7 +140,7 @@ const ipttest = () => {
           <div className="navbar-end">
             <button
               onClick={connectWalletHandler}
-              className="button is-primary"
+              className={`button is-primary ${loading ? 'is-loading' : ''}`}
             >
               Connect Wallet
             </button>
@@ -151,7 +160,7 @@ const ipttest = () => {
             <div className="navbar-end">
                 <button
                   onClick={null}
-                  className="button is-primary"
+                  className={`button is-primary ${loading ? 'is-loading' : ''}`}
                 >
                   get IPT
                 </button>
@@ -174,29 +183,29 @@ const ipttest = () => {
                 <label htmlFor="myInput">Type address:</label>
 
                 <input
-                  class="input"
+                  className="input"
                   type="text"
                   id="approveAddress"
                   value={approveAddress}
                   onChange={approvalAddressChange}
                 />
-                <p class="help">You typed: {approveAddress}</p>
+                <p className="help">You typed: {approveAddress}</p>
               </div>
               <div>
                 <label htmlFor="myInput">Amount:</label>
                 <input
-                  class="input"
+                  className="input"
                   type="text"
                   id="approveAmount"
                   value={approveAmount}
                   onChange={approvalAmountChange}
                 />
-                <p class="help">You typed: {approveAmount}</p>
+                <p className="help">You typed: {approveAmount}</p>
               </div>
               <div className="navbar-end">
                 <button
                   onClick={setApprovalHandler}
-                  className="button is-primary"
+                  className={`button is-primary ${loading ? 'is-loading' : ''}`}
                 >
                   Approve
                 </button>
@@ -206,7 +215,7 @@ const ipttest = () => {
                 <div className="navbar-end">
                   <button
                     onClick={readApprovalHandler}
-                    className="button is-primary"
+                    className={`button is-primary ${loading ? 'is-loading' : ''}`}
                   >
                     Allowance
                   </button>

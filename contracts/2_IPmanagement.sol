@@ -17,12 +17,11 @@ interface IERC20{
 }
 
 contract IPtrade is ReentrancyGuard{
-
     /* 
     token variables
     */
     address payable public owner;
-    address private onlyOwnerHelper;
+    address private ONLY_OWNERHelper;
     IERC20 public token;
     uint256 public initialTime;
 
@@ -82,11 +81,11 @@ contract IPtrade is ReentrancyGuard{
     constructor(address tokenAddress) payable{
         token = IERC20(tokenAddress);
         owner = payable(msg.sender);
-        onlyOwnerHelper = payable(msg.sender);
+        ONLY_OWNERHelper = payable(msg.sender);
     }
 
     /*
-    translate variables onlyOwnerHelper functions
+    translate variables ONLY_OWNERHelper functions
     */
     //__md5Length tested
     function checkMd5Length(string memory str) public pure returns (bool){
@@ -105,61 +104,61 @@ contract IPtrade is ReentrancyGuard{
     setter and getter variable functions, simple variables
     */
 
-    //__onlyOwnerHelper
+    //__ONLY_OWNERHelper
     //set  tested
-    function setHelper(address _onlyOwnerHelper) external onlyOwner{
-        onlyOwnerHelper = _onlyOwnerHelper;
+    function setHelper(address _ONLY_OWNERHelper) external ONLY_OWNER{
+        ONLY_OWNERHelper = _ONLY_OWNERHelper;
     }
 
     //get tested
-    function getHelper () public view onlyOwner returns (address){
-        return (onlyOwnerHelper);
+    function getHelper () public view ONLY_OWNER returns (address){
+        return (ONLY_OWNERHelper);
     }
 
     //__WithdrawalAmount 
     //set tested
-    function setFreeIpTokenwithdrawal(uint256 amount) external onlyOwner{
+    function setFreeIpTokenwithdrawal(uint256 amount) external ONLY_OWNER{
         freeIpTokenwithdrawal = amount;
     }
 
 
     //__LockTime 
     //set tested
-    function setLockTime(uint256 amount) external onlyOwner{
+    function setLockTime(uint256 amount) external ONLY_OWNER{
         lockTime = amount * 1 seconds;
     }
 
 
     //__FreetokensBool
     //set tested
-    function setFreetokensBool (bool provide) external onlyOwner{
+    function setFreetokensBool (bool provide) external ONLY_OWNER{
         freeTokensBool = provide;
     }
  
 
     //__IptRegistrationPrice
     //set tested
-    function setregisterIPCostIpt(uint256 amount) external onlyOwner{ //name it sales price
+    function setregisterIPCostIpt(uint256 amount) external ONLY_OWNER{ //name it sales price
         registerIPCostIpt = amount;
     }
 
 
     //__IptTransferPrice
     //set tested
-    function setTransferIPCostIpt(uint256 amount) external onlyOwner {
+    function setTransferIPCostIpt(uint256 amount) external ONLY_OWNER {
         transferIPCostIpt = amount;
     }
 
 
     //__EthRegistrationPrice
     //set tested
-    function setRegisterIPCostEth(uint256 amount) external onlyOwner { //name it sales price
+    function setRegisterIPCostEth(uint256 amount) external ONLY_OWNER { //name it sales price
         registerIPCostEth = amount;
     }
 
     //__EthTransferPrice
     //set tested
-    function setTransferIPCostEth(uint256 amount) external onlyOwner{
+    function setTransferIPCostEth(uint256 amount) external ONLY_OWNER{
         transferIPCostEth = amount;
     }
 
@@ -173,12 +172,12 @@ contract IPtrade is ReentrancyGuard{
     }
 
     //__iptInContract tested
-    function getIptInContract() external view onlyOwner returns (uint256){
+    function getIptInContract() external view ONLY_OWNER returns (uint256){
         return iptInContract;
     } 
 
     //__ethersInContract tested
-    function getEthersInContract() external view onlyOwner returns (uint256){
+    function getEthersInContract() external view ONLY_OWNER returns (uint256){
         return ethersInContract;
     }
 
@@ -214,13 +213,13 @@ contract IPtrade is ReentrancyGuard{
 
     //__SpentIptOdometer
     //get tested
-    function getSpentIptOdometer() external view onlyOwner returns (uint256) {
+    function getSpentIptOdometer() external view ONLY_OWNER returns (uint256) {
         return spentIptOdometer;
     }
 
     //__SpentEthOdometer
     //get tested
-    function getSpentEthOdometer() external view onlyOwner returns (uint256) {
+    function getSpentEthOdometer() external view ONLY_OWNER returns (uint256) {
         return spentEtherOdometer;
     }
 
@@ -273,7 +272,7 @@ contract IPtrade is ReentrancyGuard{
 
     //__userEtherWithdrawal tested
     // user can withdraw some Ether
-    function userEtherWithdrawal(uint256 amount) external payable{ // nonReentrant {
+    function userEtherWithdrawal(uint256 amount) external payable nonReentrant {
         require (etherCredit[msg.sender] >= amount, "no ETH");
         etherCredit[msg.sender] -= amount;
         payable(msg.sender).transfer(amount); 
@@ -293,7 +292,7 @@ contract IPtrade is ReentrancyGuard{
 
     //__withdrawSpentEth tested
     // owner can withdraw spent Ether
-    function withdrawSpentEth() external onlyOwner nonReentrant{
+    function withdrawSpentEth() external ONLY_OWNER nonReentrant{
         require(spentEtherOdometer > 0, "no ETH");
         emit Withdrawal(owner, spentEtherOdometer);
         owner.transfer(spentEtherOdometer);
@@ -303,7 +302,7 @@ contract IPtrade is ReentrancyGuard{
 
     //__withdrawSpentCoins tested
     // owner can withdraw spent coins
-    function withdrawSpentIpt() external onlyOwner nonReentrant{
+    function withdrawSpentIpt() external ONLY_OWNER nonReentrant{
         require(spentIptOdometer > 0, "no IPT");
         token.transfer(owner, spentIptOdometer);
         iptInContract -= spentIptOdometer;
@@ -446,9 +445,9 @@ contract IPtrade is ReentrancyGuard{
             address currentOwner = md5s[md5].owner;
 
             // remove credit    
-            etherCredit[msg.sender] -= salesPrice;
+            etherCredit[msg.sender]   -= salesPrice;
             etherCredit[currentOwner] += salesPrice;
-            ethersInContract -= salesPrice;
+            ethersInContract          -= salesPrice;
         }
 
         // transfer ether virtually 
@@ -462,9 +461,9 @@ contract IPtrade is ReentrancyGuard{
         onsale[md5].exists = false;
     }
 
-    //__onlyOwner and helper tested
-    modifier onlyOwner(){
-        require( msg.sender == owner || msg.sender == onlyOwnerHelper, "owner or helper only");
+    //__ONLY_OWNER and helper tested
+    modifier ONLY_OWNER(){
+        require( msg.sender == owner || msg.sender == ONLY_OWNERHelper, "owner or helper only");
         _;
     }
 
