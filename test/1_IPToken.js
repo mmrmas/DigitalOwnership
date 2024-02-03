@@ -2,12 +2,6 @@ const { expect } = require("chai");
 const hre = require("hardhat");
 const { ethers } = require("hardhat");
 
-/*
-todos
-- set the amounts straight: 18 zeros when owner sets; 0 zero's in case of payment; check zero's in EtH!
-*/
-
-
 describe("IPtoken contract", function () {
   // global vars
   let Token;
@@ -20,14 +14,15 @@ describe("IPtoken contract", function () {
   let addr1;
   let addr2;
   let tokenCap = 100000000;
-  let tokenBlockReward = 50;
+  let tokenFirstMint = 80000000;
+  let tokenBlockReward = 100n;
 
   beforeEach(async function () {
     // Get the contractfactory and signers here
     Token = await ethers.getContractFactory("IPToken");
     [owner, addr1, addr2] = await hre.ethers.getSigners();
 
-    ipToken = await Token.deploy(tokenCap, tokenBlockReward);
+    ipToken = await Token.deploy(tokenCap, tokenFirstMint, tokenBlockReward);
 
     IPtrade = await ethers.getContractFactory("IPtrade");
     iptrade = await IPtrade.deploy(ipToken.target);
@@ -40,7 +35,6 @@ describe("IPtoken contract", function () {
   it("Should print owner's address", async function () {
     console.log(owner.address);
     console.log(iptrade.target);
-    // Add assertions or other test code here
   });
 
   describe("Deployment", function () {
@@ -65,28 +59,10 @@ describe("IPtoken contract", function () {
 
     });
 
-    it("Should set the blockReward to the argument provided during deployment", async function () {
-      const blockReward = await ipToken.blockReward();
-
-    
-      // Compare the string representations
-      expect(blockReward.toString()).to.equal(tokenBlockReward.toString());
-
-      // set to a differnt number
-      await ipToken.setBlockReward(130);
-      const blockReward_mofified = await ipToken.blockReward();
-      expect(blockReward_mofified.toString()).to.equal("130");
-    });
-
-    it("Should fail if not owner", async function(){
-       // set to a differnt number
-       await expect(ipToken.connect(addr2).setBlockReward(130)).
-       to.be.revertedWith("Only the owner can call this function");
-    })
   });
 
 
-
+/* this is an interal function now
   describe("translate variables onlyOwnerHelper functions", function () {
     it("CheckMd5Length should return 32", async function () {
       await expect(iptrade.checkMd5Length('f65a88a4d7e47905325c6b71495fc0b'))
@@ -96,7 +72,7 @@ describe("IPtoken contract", function () {
     })
 
   });
-
+*/
 
 
   describe("Setter and Getter functions", function () {
@@ -134,44 +110,48 @@ describe("IPtoken contract", function () {
     })
 
     it("Should set the registerIPCostIpt ", async function () {
-      await iptrade.connect(owner).setregisterIPCostIpt(4000000000000000000n);
+      await iptrade.connect(owner).setIPCostIpt(4000000000000000000n, 1);
       expect(await iptrade.registerIPCostIpt()).to.equal(4000000000000000000n);
     })
     it("...Should fail to set if not the owner", async function () {
       await expect(
-        iptrade.connect(addr1).setregisterIPCostIpt(1)
+        iptrade.connect(addr1).setIPCostIpt(1,1)
       ).to.be.revertedWith("owner or helper only");
     })
 
     it("Should set the transferIPCostIpt ", async function () {
-      await iptrade.connect(owner).setTransferIPCostIpt(4000000000000000000n);
+      await iptrade.connect(owner).setIPCostIpt(1, 4000000000000000000n);
       expect(await iptrade.transferIPCostIpt()).to.equal(4000000000000000000n);
     })
     it("...Should fail to set if not the owner", async function () {
       await expect(
-        iptrade.connect(addr1).setTransferIPCostIpt(1)
+        iptrade.connect(addr1).setIPCostIpt(1,1)
       ).to.be.revertedWith("owner or helper only");
     })
 
     it("Should set the registerIPCostEth ", async function () {
-      await iptrade.connect(owner).setRegisterIPCostEth(4000000000000000n);
+      await iptrade.connect(owner).setIPCostEth(4000000000000000n, 1);
       expect(await iptrade.registerIPCostEth()).to.equal(4000000000000000n);
     })
     it("...Should fail to set if not the owner", async function () {
       await expect(
-        iptrade.connect(addr1).setRegisterIPCostEth(1)
+        iptrade.connect(addr1).setIPCostEth(1,1)
       ).to.be.revertedWith("owner or helper only");
     })
 
     it("Should set the transferIPCostEth ", async function () {
-      await iptrade.connect(owner).setTransferIPCostEth(4000000000000000n);
+      await iptrade.connect(owner).setIPCostEth(1, 4000000000000000n);
       expect(await iptrade.transferIPCostEth()).to.equal(4000000000000000n);
     })
     it("...Should fail to set if not the owner", async function () {
       await expect(
-        iptrade.connect(addr1).setTransferIPCostEth(1)
+        iptrade.connect(addr1).setIPCostEth(1,1)
       ).to.be.revertedWith("owner or helper only");
     })
+
+  })
+
+  describe("Setter and Getter functions for transactions", function () {
 
     it("Should check the deposit function and ethercredit ", async function () {
       // Check the deposit function
@@ -189,12 +169,12 @@ describe("IPtoken contract", function () {
       // Check the fallback option
       const valueToSend = ethers.parseEther("1.0"); // Send 1 ETH
       await expect(addr1.sendTransaction({ to: iptrade.target, value: valueToSend })).
-        to.be.revertedWith("Fallback function disabled. Use deposit() for Ether or contractReceivesCredit() for IPT.");
+        to.be.revertedWith("Fallback function disabled. Use deposit() for Ether or depositIPT() for IPT.");
 
 
       const zero = ethers.parseEther('0'); // Send 0 ETH
       await expect(addr1.sendTransaction({ to: iptrade.target, value: zero }))
-        .to.be.revertedWith("Fallback function disabled. Use deposit() for Ether or contractReceivesCredit() for IPT.");
+        .to.be.revertedWith("Fallback function disabled. Use deposit() for Ether or depositIPT() for IPT.");
     })
 
     it("Should test IP registration successfully", async function () {
@@ -221,18 +201,20 @@ describe("IPtoken contract", function () {
     })
 
     it("Should set IP", async function () {
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+      await iptrade.depositIPT(100000000000000000000n);
 
       // transer IPT to addr1
-      await ipToken.transfer(addr1.address, 50000000000000000000n);
-      expect(await ipToken.balanceOf(addr1.address)).to.equal(50000000000000000000n);
+      await ipToken.transfer(addr1.address, 5000000000000000000000n);
+      expect(await ipToken.balanceOf(addr1.address)).to.equal(5000000000000000000000n);
 
       // addr1 approves contract to spend
-      await ipToken.connect(addr1).approveAmount(iptrade.target, 40000000000000000000n);
-      expect(await ipToken.connect(addr1).readApprovalFor(iptrade.target)).to.equal(40000000000000000000n);
+      await ipToken.connect(addr1).approve(iptrade.target, 4000000000000000000000n);
+      expect(await ipToken.connect(addr1).readApprovalFor(iptrade.target)).to.equal(4000000000000000000000n);
 
       // addr1 sends tokens to contract
-      await iptrade.connect(addr1).contractReceivesCredit(10000000000000000000n, addr1.address);
-      expect(await iptrade.connect(addr1).getIptBalance()).to.equal(10000000000000000000n);
+      await iptrade.connect(addr1).depositIPT(1000000000000000000000n);
+      expect(await iptrade.connect(addr1).getIptBalance()).to.equal(1000000000000000000000n);
 
       //addr1 sends Ether to contract
       const valueToSend = ethers.parseEther('1'); // Send 1 ETH
@@ -262,33 +244,26 @@ describe("IPtoken contract", function () {
       expect(result.creationTimeStamp).to.be.above(1698873404n);
       expect(result.exists).to.equal(true);
       // this should fail
-      await expect(iptrade.getIP('f65a88a4d7e47905325c6b71495fc0b')).
-        to.be.revertedWith("md5 incorr");
-      await expect(iptrade.getIP('f65a88a4d7e47905325c6b71495fc0sdsb')).
-        to.be.revertedWith("md5 incorr");
+      console.log( await iptrade.getIP('f65a88a4d7e47905325c6b71495fc0b'));
+      const result_false = await iptrade.getIP('f65a88a4d7e47905325c6b71495fc0b');
+      expect(result_false[0]).to.equal(false);
+      //await expect(iptrade.getIP('f65a88a4d7e47905325c6b71495fc0sdsb')).
+       // to.be.rejected();//revertedWith("md5 incorr");
 
       // check transactions
       console.log(await iptrade.getIpTransactions('f65a88a4d7e47905325c6b71495fc0b6'));
 
       // calculate remains IPT
-      expect(await iptrade.connect(addr1).getIptBalance()).to.equal(9000000000000000000n);
-      expect(await ipToken.connect(addr1).readApprovalFor(iptrade.target)).to.equal(29000000000000000000n);
+      expect(await iptrade.connect(addr1).getIptBalance()).to.equal(900000000000000000000n);
+      expect(await ipToken.connect(addr1).readApprovalFor(iptrade.target)).to.equal(2900000000000000000000n);
       console.log(await ethers.provider.getBalance(addr1.address));
 
-      // should fail if not owner
-      await expect(iptrade.connect(addr1).getSpentIptOdometer())
-        .to.be.revertedWith("owner or helper only");
-      expect(await iptrade.connect(owner).getSpentIptOdometer()).to.equal(2000000000000000000n);
-
+      expect(await iptrade.connect(owner).spentIptOdometer()).to.equal(200000000000000000000n);
 
       // calculate remains ETH
       expect(await iptrade.connect(addr1).getEtherCredit()).to.equal(999000000000000000n);
 
-      // should fail if not owner
-      await expect(iptrade.connect(addr1).getSpentEthOdometer())
-        .to.be.revertedWith("owner or helper only");
-
-      expect(await iptrade.connect(owner).getSpentEthOdometer()).to.equal(1000000000000000n);
+      expect(await iptrade.connect(owner).spentEtherOdometer()).to.equal(1000000000000000n);
     })
   })
 
@@ -297,18 +272,20 @@ describe("IPtoken contract", function () {
 
   it("Should request tokens successfully when funds are transferred to contract and adhere to the time limit and the freetoken bool is true", async function () {
     // transfer
-    await ipToken.transfer(iptrade.target, 1000000000000000000n);
+    await ipToken.approve(iptrade.target, 100000000000000000000n);
+    await iptrade.depositIPT(100000000000000000000n);
     const iptradeBalance = await ipToken.balanceOf(iptrade.target);
-    expect(iptradeBalance).to.equal(1000000000000000000n);
+    expect(iptradeBalance).to.equal(100000000000000000000n);
 
     // request
     const addr1Balance_before = await ipToken.balanceOf(addr1.address);
     await iptrade.connect(addr1).requestTokens();
     const addr1Balance_after = await ipToken.balanceOf(addr1.address);
-    expect(addr1Balance_after).to.equal(addr1Balance_before + 1000000000000000000n);
+    expect(addr1Balance_after).to.equal(addr1Balance_before + 100000000000000000000n);
 
     // request again
-    await ipToken.transfer(iptrade.target, 1000000000000000000n);
+    await ipToken.approve(iptrade.target, 100000000000000000000n);
+    await iptrade.depositIPT(100000000000000000000n);
     await expect(
       iptrade.connect(addr1).requestTokens()
     ).to.be.revertedWith("try later");
@@ -333,9 +310,10 @@ describe("IPtoken contract", function () {
 
     it("Should revert a token request when repeated", async function () {
       // transfer
-      await ipToken.transfer(iptrade.target, 1000000000000000000n);
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+      await iptrade.depositIPT(100000000000000000000n);
       const iptradeBalance = await ipToken.balanceOf(iptrade.target);
-      expect(iptradeBalance).to.equal(1000000000000000000n);
+      expect(iptradeBalance).to.equal(100000000000000000000n);
 
       // request
       const freeIpTokenwithdrawal = await iptrade.freeIpTokenwithdrawal();
@@ -347,7 +325,8 @@ describe("IPtoken contract", function () {
       expect(iptradeBalance_after).to.equal(iptradeBalance - freeIpTokenwithdrawal);
 
       // request again
-      await ipToken.transfer(iptrade.target, 1000000000000000000n);
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+      await iptrade.depositIPT(100000000000000000000n);
       await expect(
         iptrade.connect(addr1).requestTokens()
       ).to.be.revertedWith("try later");
@@ -368,24 +347,24 @@ describe("IPtoken contract", function () {
 
     it("Should revert if owner balance is too low", async function () {
       await expect(
-        iptrade.connect(addr2).contractReceivesCredit(1500000000000000000n, addr2.address))
+        iptrade.connect(addr2).depositIPT(1500000000000000000n))
         .to.be.revertedWith("No funds");
     })
 
     it("Should revert if allowance for the spender is too low", async function () {
       await ipToken.transfer(addr2.address, 1500000000000000000n);
       await expect(
-        iptrade.connect(addr2).contractReceivesCredit(1500000000000000000n, addr2.address))
+        iptrade.connect(addr2).depositIPT(1500000000000000000n))
         .to.be.revertedWith("No allowance");
     })
 
     it("Should transfer with the right allowance", async function () {
       await ipToken.transfer(addr2.address, 3500000000000000000n);
-      await ipToken.connect(addr2).approveAmount(iptrade.target, 2500000000000000000n);
+      await ipToken.connect(addr2).approve(iptrade.target, 2500000000000000000n);
       await expect(
-        iptrade.connect(addr2).contractReceivesCredit(3500000000000000000n, addr2.address))
+        iptrade.connect(addr2).depositIPT(3500000000000000000n))
         .to.be.revertedWith("No allowance");
-      await iptrade.connect(addr2).contractReceivesCredit(1500000000000000000n, addr2.address);
+      await iptrade.connect(addr2).depositIPT(1500000000000000000n);
       // confirm balance addr2
       expect(await ipToken.balanceOf(addr2.address)).to.equal(2000000000000000000n);
       // confirm balance iptrade
@@ -426,14 +405,9 @@ describe("IPtoken contract", function () {
       expect(await ethers.provider.getBalance(iptrade.target)).to.equal(500000000000000000n);
       expect(ether_start).to.be.above(ether_end);
       expect(ether_end).to.be.above(ether_middle);
-      expect(await ethers.provider.getBalance(iptrade.target)).to.equal(await iptrade.getEthersInContract());
+      expect(await ethers.provider.getBalance(iptrade.target)).to.equal(await iptrade.ethersInContract());
     })
   })
-
-
-
-
-
 
 
 
@@ -448,8 +422,8 @@ describe("IPtoken contract", function () {
       // allowance and transfer
       await ipToken.transfer(addr1.address, 3500000000000000000n);
       const ipt_start = (await ipToken.balanceOf(addr1.address)); //35 , 25 30
-      await ipToken.connect(addr1).approveAmount(iptrade.target, 1000000000000000000n);
-      await iptrade.connect(addr1).contractReceivesCredit(1000000000000000000n, addr1.address);
+      await ipToken.connect(addr1).approve(iptrade.target, 1000000000000000000n);
+      await iptrade.connect(addr1).depositIPT(1000000000000000000n);
       const ipt_middle = (await ipToken.balanceOf(addr1.address));
       // ipt credit check
       expect(await iptrade.connect(addr1).getIptBalance()).to.equal(1000000000000000000n);
@@ -464,13 +438,14 @@ describe("IPtoken contract", function () {
       expect(await ipToken.balanceOf(iptrade.target)).to.equal(500000000000000000n);
       expect(ipt_start).to.equal(ipt_end + 500000000000000000n);
       expect(ipt_end).to.equal(ipt_middle + 500000000000000000n);
-      expect(await ipToken.balanceOf(iptrade.target)).to.equal(await iptrade.getIptInContract());
+      expect(await ipToken.balanceOf(iptrade.target)).to.equal(await iptrade.iptInContract());
     })
 
   })
 
   describe("Withdrawals made by owner", function () {
     it("Should withdraw Ether to the owner balance", async function () {
+
       // test requirement
       await expect(iptrade.withdrawSpentEth()).to.be.revertedWith("no ETH");
       await expect(iptrade.connect(addr2).withdrawSpentEth()).to.be.revertedWith("owner or helper only");
@@ -481,17 +456,22 @@ describe("IPtoken contract", function () {
       const registerIPCostEth = await iptrade.registerIPCostEth();
       await iptrade.connect(addr2).deposit({ value: valueToSend });
       // set IP
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+      await iptrade.depositIPT(100000000000000000000n);
       await iptrade.connect(addr2).setIP('f65a88a4d7e47905325c6b71495fc0b6', false, true);
-      expect(await iptrade.getSpentEthOdometer()).to.equal(registerIPCostEth);
+      expect(await iptrade.spentEtherOdometer()).to.equal(registerIPCostEth);
+      
       // transfer spent ETH to the owner
       const ownerBalancePrior = await ethers.provider.getBalance(owner.address);
       await iptrade.connect(owner).withdrawSpentEth();
       const ownerBalanceAfter = await ethers.provider.getBalance(owner.address);
-      console.log(await ethers.provider.getBalance(owner.address));
-      console.log(await ethers.provider.getBalance(iptrade.target));
+      console.log(await ethers.provider.getBalance(owner.address), "owner");
+      console.log(await ethers.provider.getBalance(iptrade.target), "iptrade");
+      console.log(ownerBalancePrior, "prior");
+      console.log(ownerBalanceAfter, "after");
       expect(ownerBalanceAfter).to.be.above(ownerBalancePrior);
       expect(ownerBalanceInitial).to.be.below(ownerBalanceAfter);
-      expect(await iptrade.getSpentEthOdometer()).to.equal(0);
+      expect(await iptrade.spentEtherOdometer()).to.equal(0);
 
       // check balances
       // balance user
@@ -500,32 +480,39 @@ describe("IPtoken contract", function () {
       // balance contract
       expect(await ethers.provider.getBalance(iptrade.target)).to.equal(remaining);
       // ethersincontract
-      expect(await iptrade.getEthersInContract()).to.equal(remaining);
+      expect(await iptrade.ethersInContract()).to.equal(remaining);
     })
 
 
 
     it("Should withdraw IPT to the owner balance", async function () {
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+      await iptrade.depositIPT(100000000000000000000n);
+
       // test requirement
       await expect(iptrade.withdrawSpentIpt()).to.be.revertedWith("no IPT");
       await expect(iptrade.connect(addr2).withdrawSpentIpt()).to.be.revertedWith("owner or helper only");
 
       // send ether to addr2
-      await ipToken.transfer(addr2.address, 10000000000000000000n);
-      await ipToken.connect(addr2).approveAmount(iptrade.target, 10000000000000000000n);
+      await ipToken.transfer(addr2.address, 1000000000000000000000n);
+      await ipToken.connect(addr2).approve(iptrade.target, 1000000000000000000000n);
       const ownerBalanceInitial = await ipToken.balanceOf(owner.address);
+      console.log(ownerBalanceInitial);
       const registerIPCostIpt = await iptrade.registerIPCostIpt();
 
       // set IP
       await iptrade.connect(addr2).setIP('f65a88a4d7e47905325c6b71495fc0b6', true, false);
-      expect(await iptrade.getSpentIptOdometer()).to.equal(registerIPCostIpt);
+      expect(await iptrade.spentIptOdometer()).to.equal(registerIPCostIpt);
+
       // transfer spent IPT to the owner
       const ownerBalancePrior = await ipToken.balanceOf(owner.address);
       await iptrade.connect(owner).withdrawSpentIpt();
       const ownerBalanceAfter = await ipToken.balanceOf(owner.address);
+      console.log(ownerBalanceAfter);
       expect(ownerBalanceAfter).to.equal(ownerBalancePrior + registerIPCostIpt);
       expect(ownerBalanceInitial).to.equal(ownerBalanceAfter - registerIPCostIpt);
-      expect(await iptrade.getSpentIptOdometer()).to.equal(0);
+      expect(await iptrade.spentIptOdometer()).to.equal(0);
+
 
       // check balances
       // balance user
@@ -534,91 +521,114 @@ describe("IPtoken contract", function () {
       // balance contract
       expect(await ipToken.balanceOf(iptrade.target)).to.equal(remaining);
       // ethersincontract
-      expect(await iptrade.getIptInContract()).to.equal(remaining);
+      expect(await iptrade.iptInContract()).to.equal(remaining);
     })
   })
 
   describe("The owner creates a Sales Intent", function () {
     it("Should revert if the onsale instance does not exist", async function () {
-      await expect(iptrade.connect(addr1).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 20000000000000000000n, addr2.address, false, false))
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+      await iptrade.depositIPT(100000000000000000000n);
+      await expect(iptrade.connect(addr1).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 2000000000000000000000n, addr2.address, false, false))
         .to.be.revertedWith("ip not exist");
     })
 
     it("Should revert if the user is not the owner of the IP", async function () {
-      await ipToken.transfer(addr2.address, 10000000000000000000n);
-      await ipToken.connect(addr2).approveAmount(iptrade.target, 10000000000000000000n);
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+      await iptrade.depositIPT(100000000000000000000n);
+      await ipToken.transfer(addr2.address, 1000000000000000000000n);
+      await ipToken.connect(addr2).approve(iptrade.target, 1000000000000000000000n);
       await iptrade.connect(addr2).setIP('f65a88a4d7e47905325c6b71495fc0b6', true, false);
       console.log(await iptrade.getIP('f65a88a4d7e47905325c6b71495fc0b6'));
       // try to create sales intent as addr1
-      await expect(iptrade.connect(addr1).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 20000000000000000000n, addr2.address, false, false))
+      await expect(iptrade.connect(addr1).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 2000000000000000000000n, addr2.address, false, false))
         .to.be.revertedWith("not owner");
     })
 
     it('Should revert if both ETH and on Allowance', async function () {
-      await ipToken.transfer(addr2.address, 10000000000000000000n);
-      await ipToken.connect(addr2).approveAmount(iptrade.target, 10000000000000000000n);
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+      await iptrade.depositIPT(100000000000000000000n);
+      await ipToken.transfer(addr2.address, 1000000000000000000000n);
+      await ipToken.connect(addr2).approve(iptrade.target, 1000000000000000000000n);
       await iptrade.connect(addr2).setIP('f65a88a4d7e47905325c6b71495fc0b6', true, false);
       console.log(await iptrade.getIP('f65a88a4d7e47905325c6b71495fc0b6'));
       // try to create sales intent as addr1
-      await expect(iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 20000000000000000000n, addr2.address, true, true))
+      await expect(iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 2000000000000000000000n, addr2.address, true, true))
         .to.be.revertedWith("cant approve ETH");
     })
 
     it('Should revert if not suffience IPT in account', async function () {
-      await ipToken.transfer(addr2.address, 1000000000000000000n);
-      await ipToken.connect(addr2).approveAmount(iptrade.target, 1000000000000000000n);
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+      await iptrade.depositIPT(100000000000000000000n);
+      await ipToken.transfer(addr2.address, 100000000000000000000n);
+      await ipToken.connect(addr2).approve(iptrade.target, 100000000000000000000n);
       await iptrade.connect(addr2).setIP('f65a88a4d7e47905325c6b71495fc0b6', true, false);
       console.log(await iptrade.getIP('f65a88a4d7e47905325c6b71495fc0b6'));
       // try to create sales intent as addr1
-      await expect(iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 20000000000000000000n, addr2.address, false, false))
+      await expect(iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 2000000000000000000000n, addr2.address, false, false))
         .to.be.revertedWith("no IPT");
     })
 
     it('Should revert if not suffience IPT balance', async function () {
-      await ipToken.transfer(addr2.address, 1000000000000000000n);
-      await ipToken.connect(addr2).approveAmount(iptrade.target, 1000000000000000000n);
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+      await iptrade.depositIPT(100000000000000000000n);
+      await ipToken.transfer(addr2.address, 100000000000000000000n);
+      await ipToken.connect(addr2).approve(iptrade.target, 100000000000000000000n);
       await iptrade.connect(addr2).setIP('f65a88a4d7e47905325c6b71495fc0b6', true, false);
 
       // try to create sales intent as addr1
-      await expect(iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 20000000000000000000n, addr2.address, true, false))
+      await expect(iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 2000000000000000000000n, addr2.address, true, false))
         .to.be.revertedWith("No allowance");
     })
 
     it('Should revert if not suffience ETH in account balance', async function () {
-      await ipToken.transfer(addr2.address, 1000000000000000000n);
-      await ipToken.connect(addr2).approveAmount(iptrade.target, 1000000000000000000n);
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+      await iptrade.depositIPT(100000000000000000000n);
+      await ipToken.transfer(addr2.address, 100000000000000000000n);
+      await ipToken.connect(addr2).approve(iptrade.target, 100000000000000000000n);
       await iptrade.connect(addr2).setIP('f65a88a4d7e47905325c6b71495fc0b6', true, false);
       // try to create sales intent as addr1
-      await expect(iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 20000000000000000000n, addr2.address, false, true))
+      await expect(iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 2000000000000000000000n, addr2.address, false, true))
         .to.be.revertedWith("no ETH");
     })
 
     it('Should successfully create intent wit IPT allowance', async function () {
-      await ipToken.transfer(addr2.address, 10000000000000000000n);
-      await ipToken.connect(addr2).approveAmount(iptrade.target, 10000000000000000000n);
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+      await iptrade.depositIPT(100000000000000000000n);
+      await ipToken.transfer(addr2.address, 1000000000000000000000n);
+      await ipToken.connect(addr2).approve(iptrade.target, 1000000000000000000000n);
       await iptrade.connect(addr2).setIP('f65a88a4d7e47905325c6b71495fc0b6', true, false);
-      await iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 20000000000000000000n, addr2.address, true, false);
+      await iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 2000000000000000000000n, addr1.address, true, false);
       const struct = await iptrade.getSalesIntent('f65a88a4d7e47905325c6b71495fc0b6');
       expect(struct.owner_address).to.equal(addr2.address);
+      expect(struct.buyer_address).to.equal(addr1.address);
     })
 
     it('Should successfully create intent wit IPT balance', async function () {
-      await ipToken.transfer(addr2.address, 10000000000000000000n);
-      await ipToken.connect(addr2).approveAmount(iptrade.target, 10000000000000000000n);
-      await iptrade.connect(addr2).contractReceivesCredit(5000000000000000000n, addr2.address);
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+      await iptrade.depositIPT(100000000000000000000n);
+      await ipToken.transfer(addr2.address, 1000000000000000000000n);
+      await ipToken.connect(addr2).approve(iptrade.target, 1000000000000000000000n);
+      await iptrade.connect(addr2).depositIPT(500000000000000000000n);
       await iptrade.connect(addr2).setIP('f65a88a4d7e47905325c6b71495fc0b6', false, false);
-      await iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 20000000000000000000n, addr2.address, false, false);
+      await iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 2000000000000000000000n, addr1.address, false, false);
       const struct = await iptrade.getSalesIntent('f65a88a4d7e47905325c6b71495fc0b6');
       expect(struct.owner_address).to.equal(addr2.address);
+      expect(struct.buyer_address).to.equal(addr1.address);
     })
 
     it('Should successfully create intent wit ETH balance', async function () {
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+      await iptrade.depositIPT(100000000000000000000n);
       const valueToSend = ethers.parseEther('1'); // Send 1 ETH
       await iptrade.connect(addr2).deposit({ value: valueToSend });
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+await iptrade.depositIPT(100000000000000000000n);
       await iptrade.connect(addr2).setIP('f65a88a4d7e47905325c6b71495fc0b6', false, true);
-      await iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 200000000000000000n, addr2.address, false, true);
+      await iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 200000000000000000n, addr1.address, false, true);
       const struct = await iptrade.getSalesIntent('f65a88a4d7e47905325c6b71495fc0b6');
       expect(struct.owner_address).to.equal(addr2.address);
+      expect(struct.buyer_address).to.equal(addr1.address);
 
       // should fail
       await expect(iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 200000000000000000n, addr2.address, false, true))
@@ -630,8 +640,12 @@ describe("IPtoken contract", function () {
   describe("The sales intent cancellation", function () {
 
     beforeEach(async function () {
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+      await iptrade.depositIPT(100000000000000000000n);
       const valueToSend = ethers.parseEther('1'); // Send 1 ETH
       await iptrade.connect(addr2).deposit({ value: valueToSend });
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+await iptrade.depositIPT(100000000000000000000n);
       await iptrade.connect(addr2).setIP('f65a88a4d7e47905325c6b71495fc0b6', false, true);
       await iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 200000000000000000n, addr2.address, false, true);
     })
@@ -658,45 +672,53 @@ describe("IPtoken contract", function () {
       await expect(iptrade.connect(addr2).sellerCancelsSalesIntent('f65a88a4d7e47905325c6b71495fc0b6')).
         to.be.revertedWith("Your ip is not for sale");
     })
-  })
 
-  describe("The buyer takes over the IP but fails", function () {
-
-    beforeEach(async function () {
-      const valueToSend = ethers.parseEther('1'); // Send 1 ETH
-      await iptrade.connect(addr2).deposit({ value: valueToSend });
-      await iptrade.connect(addr2).setIP('f65a88a4d7e47905325c6b71495fc0b6', false, true);
-      await iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 200000000000000000n, addr1.address, false, true);
-    })
-
-    it("Should revert if ether and approval", async function () {
-      await expect(iptrade.connect(owner).buyerBuysIP(200000000000000000n, 'f65a88a4d7e47905325c6b71495fc0b6', true, true))
-        .to.be.revertedWith("cant approve ETH");
-    })
-
-    it("Should revert if the user is not the new owner", async function () {
-      await expect(iptrade.connect(owner).buyerBuysIP(200000000000000000n, 'f65a88a4d7e47905325c6b71495fc0b6', false, true))
-        .to.be.revertedWith("not buyer");
-    })
-
-    it("Should revert if the amount is not correct", async function () {
-      await expect(iptrade.connect(addr1).buyerBuysIP(20000000000000000n, 'f65a88a4d7e47905325c6b71495fc0b6', false, true))
-        .to.be.revertedWith("incorrect price");
-    })
-
-    it("Should revert if wrong currency", async function () {
-      await expect(iptrade.connect(addr1).buyerBuysIP(200000000000000000n, 'f65a88a4d7e47905325c6b71495fc0b6', false, false))
-        .to.be.revertedWith("wrong currency");
-    })
-
-    it("Should revert if too late", async function () {
+    it("Should be successful after time elapsed", async function(){
       async function delay(seconds) {
         return new Promise(resolve => setTimeout(resolve, seconds * 1000));
       }
       await delay(1);
       await iptrade.setLockTime(1);
-      await expect(iptrade.connect(addr1).buyerBuysIP(200000000000000000n, 'f65a88a4d7e47905325c6b71495fc0b6', false, true))
-        .to.be.revertedWith("expired");
+      await (iptrade.connect(addr2).sellerCancelsSalesIntent('f65a88a4d7e47905325c6b71495fc0b6'));
+      const struct_after = await iptrade.getSalesIntent('f65a88a4d7e47905325c6b71495fc0b6');
+      expect(struct_after.exists).to.equal(false);
+      await expect(iptrade.connect(addr2).sellerCancelsSalesIntent('f65a88a4d7e47905325c6b71495fc0b6')).
+      to.be.revertedWith("Your ip is not for sale");
+
+    })
+  })
+
+  describe("The buyer takes over the IP but fails", function () {
+
+    beforeEach(async function () {
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+      await iptrade.depositIPT(100000000000000000000n);
+      const valueToSend = ethers.parseEther('1'); // Send 1 ETH
+      await iptrade.connect(addr2).deposit({ value: valueToSend });
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+await iptrade.depositIPT(100000000000000000000n);
+      await iptrade.connect(addr2).setIP('f65a88a4d7e47905325c6b71495fc0b6', false, true);
+      await iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 200000000000000000n, addr1.address, false, true);
+    })
+
+    it("Should revert if ether and approval", async function () {
+      await expect(iptrade.connect(owner).buyerBuysIP('f65a88a4d7e47905325c6b71495fc0b6', 200000000000000000n,  true, true))
+        .to.be.revertedWith("cant approve ETH");
+    })
+
+    it("Should revert if the user is not the new owner", async function () {
+      await expect(iptrade.connect(owner).buyerBuysIP('f65a88a4d7e47905325c6b71495fc0b6', 200000000000000000n, false, true))
+        .to.be.revertedWith("not buyer");
+    })
+
+    it("Should revert if the amount is not correct", async function () {
+      await expect(iptrade.connect(addr1).buyerBuysIP('f65a88a4d7e47905325c6b71495fc0b6', 20000000000000000n, false, true))
+        .to.be.revertedWith("incorrect price");
+    })
+
+    it("Should revert if wrong currency", async function () {
+      await expect(iptrade.connect(addr1).buyerBuysIP('f65a88a4d7e47905325c6b71495fc0b6', 200000000000000000n, false, false))
+        .to.be.revertedWith("wrong currency");
     })
   })
 
@@ -704,77 +726,87 @@ describe("IPtoken contract", function () {
   describe("The buyer takes over the IP", function () {
 
     beforeEach(async function () {
+      await ipToken.approve(iptrade.target, 300000000000000000000n);
+      await iptrade.depositIPT(300000000000000000000n);
 
       // send ETH to seller IPT
       const valueToSend = ethers.parseEther('1'); // Send 1 ETH
+
       await iptrade.connect(addr2).deposit({ value: valueToSend });
       //send ETH to buyer IPT
       await iptrade.connect(addr1).deposit({ value: valueToSend });
       // send IPT to seller
-      await ipToken.transfer(addr2.address, 10000000000000000000n);
-      ipToken.connect(addr2).approveAmount(iptrade.target, 10000000000000000000n);
-      iptrade.connect(addr2).contractReceivesCredit(5000000000000000000n, addr2.address)
+      await ipToken.transfer(addr2.address, 1000000000000000000000n);
+      ipToken.connect(addr2).approve(iptrade.target, 1000000000000000000000n);
+      iptrade.connect(addr2).depositIPT(500000000000000000000n)
       // send IPT to buyer
-      await ipToken.transfer(addr1.address, 10000000000000000000n,);
-      ipToken.connect(addr1).approveAmount(iptrade.target, 10000000000000000000n);
-      iptrade.connect(addr1).contractReceivesCredit(5000000000000000000n, addr1.address);
+      await ipToken.transfer(addr1.address, 1000000000000000000000n,);
+      ipToken.connect(addr1).approve(iptrade.target, 1000000000000000000000n);
+      iptrade.connect(addr1).depositIPT(500000000000000000000n);
       await iptrade.connect(addr2).setIP('f65a88a4d7e47905325c6b71495fc0b6', false, true);
       await iptrade.connect(addr2).setIP('f65a88a4d7e47905325c6b71495fc0b7', false, true);
       await iptrade.connect(addr2).setIP('f65a88a4d7e47905325c6b71495fc0b8', false, true);
       await iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b6', 200000000000000000n, addr1.address, false, true);
-      await iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b7', 2000000000000000000n, addr1.address, false, false);
-      await iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b8', 2000000000000000000n, addr1.address, true, false);
+      await iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b7', 200000000000000000000n, addr1.address, false, false);
+      await iptrade.connect(addr2).sellerCreatesSalesIntent('f65a88a4d7e47905325c6b71495fc0b8', 200000000000000000000n, addr1.address, true, false);
     })
 
     it("Should let addr1 buy the IP successfully with ETH", async function () {
-      await iptrade.connect(addr1).buyerBuysIP(200000000000000000n, 'f65a88a4d7e47905325c6b71495fc0b6', false, true);
+      const before  = await ethers.provider.getBalance(addr2.address);
+      await iptrade.connect(addr1).buyerBuysIP('f65a88a4d7e47905325c6b71495fc0b6', 200000000000000000n,  false, true);
+      const after = await ethers.provider.getBalance(addr2.address);
       // addr1 should be owner of 'f65a88a4d7e47905325c6b71495fc0b6'
       const newowner = await iptrade.getIP('f65a88a4d7e47905325c6b71495fc0b6');
       expect(newowner.owner).to.equal(addr1.address);
       // addr1 has spent eth 200000000000000000n, balance should be 800000000000000000n 
       expect(await iptrade.connect(addr1).getEtherCredit()).to.equal(800000000000000000n);
       // addr2 should have gained  eth 200000000000000000n, balance should be 1200000000000000000n
-      expect(await iptrade.connect(addr2).getEtherCredit()).to.equal(1195000000000000000n);  //10 + 2 - 0.05 (3 x registration and 1 time transfer)
+      expect(await iptrade.connect(addr2).getEtherCredit()).to.equal(995000000000000000n);   //1 - 0.003 -0.002   //10 + 2 - 0.05 (3 x registration and 1 time transfer)
+      expect(await before).to.equal(after - 200000000000000000n);   // just gained 0.2 Eth
       // check the transactions 
       console.log(await iptrade.getIpTransactions('f65a88a4d7e47905325c6b71495fc0b6'));
       // check spent ETH
-      expect(await iptrade.getSpentEthOdometer()).to.equal(5000000000000000n);
+      expect(await iptrade.spentEtherOdometer()).to.equal(5000000000000000n);
 
     })
 
     it("Should let addr1 buy the IP successfully with IPT credit", async function () {
-      await iptrade.connect(addr1).buyerBuysIP(2000000000000000000n, 'f65a88a4d7e47905325c6b71495fc0b7', false, false);
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+      await iptrade.depositIPT(100000000000000000000n);
+      await iptrade.connect(addr1).buyerBuysIP('f65a88a4d7e47905325c6b71495fc0b7', 200000000000000000000n, false, false);
       // addr1 should be owner of 'f65a88a4d7e47905325c6b71495fc0b6'
       const newowner = await iptrade.getIP('f65a88a4d7e47905325c6b71495fc0b7');
       expect(newowner.owner).to.equal(addr1.address);
       // addr1 has spent ipt 2000000000000000000n, balance should be 3000000000000000000n 
-      expect(await iptrade.connect(addr1).getIptBalance()).to.equal(3000000000000000000n);
+      expect(await iptrade.connect(addr1).getIptBalance()).to.equal(300000000000000000000n);
       // addr2 should have gained  ipt 2000000000000000000n, balance should be 3000000000000000000n
-      expect(await iptrade.connect(addr2).getIptBalance()).to.equal(3000000000000000000n); // 5 - 2 (cost of sales intent)
-      expect(await ipToken.balanceOf(addr2.address)).to.equal(5000000000000000000n); // 5 + 2(sales) - 2 (setIP)
+      expect(await iptrade.connect(addr2).getIptBalance()).to.equal(300000000000000000000n); // 5 - 2 (cost of sales intent)
+      expect(await ipToken.balanceOf(addr2.address)).to.equal(800000000000000000000n); // 5 + 2(sales) - 2 (setIP) + 3 bonues
       // check the transactions 
       console.log(await iptrade.getIpTransactions('f65a88a4d7e47905325c6b71495fc0b7'));
       //check spent IPT
-      expect(await iptrade.getSpentIptOdometer()).to.equal(4000000000000000000n);
+      expect(await iptrade.spentIptOdometer()).to.equal(400000000000000000000n);
     })
 
     it("Should let addr1 buy the IP successfully with IPT allowance", async function () {
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+      await iptrade.depositIPT(100000000000000000000n);
       // set allowance, addr2 can spend money from addr1
-      await ipToken.connect(addr1).approveAmount(addr2.address, 2000000000000000000n);
+      await ipToken.connect(addr1).approve(addr2.address, 200000000000000000000n);
       console.log(await ipToken.connect(addr1).readApprovalFor(addr2.address));
-      await iptrade.connect(addr1).buyerBuysIP(2000000000000000000n, 'f65a88a4d7e47905325c6b71495fc0b8', true, false);
+      await iptrade.connect(addr1).buyerBuysIP('f65a88a4d7e47905325c6b71495fc0b8', 200000000000000000000n, true, false);
       // addr1 should be owner of 'f65a88a4d7e47905325c6b71495fc0b8'
       const newowner = await iptrade.getIP('f65a88a4d7e47905325c6b71495fc0b8');
       expect(newowner.owner).to.equal(addr1.address);
       //addr1 has spent ipt 0, balance should be 5000000000000000000n 
-      expect(await iptrade.connect(addr1).getIptBalance()).to.equal(5000000000000000000n);
+      expect(await iptrade.connect(addr1).getIptBalance()).to.equal(500000000000000000000n);
       // addr2 should have gained  eth 200000000000000000n, balance should be 1200000000000000000n
-      expect(await iptrade.connect(addr2).getIptBalance()).to.equal(3000000000000000000n); // 5 - 2 (cost of sales intent of ...7)
-      expect(await ipToken.balanceOf(addr2.address)).to.equal(5000000000000000000n); // 5 + 2 (sales) - 2 (setIP) 
+      expect(await iptrade.connect(addr2).getIptBalance()).to.equal(300000000000000000000n); // 5 - 2 (cost of sales intent of ...7)
+      expect(await ipToken.balanceOf(addr2.address)).to.equal(800000000000000000000n); // 5 + 2 (sales) - 2 (setIP) + 3 (bonus) 
       // check the transactions 
       console.log(await iptrade.getIpTransactions('f65a88a4d7e47905325c6b71495fc0b8'));
       //check spent IPT
-      expect(await iptrade.getSpentIptOdometer()).to.equal(4000000000000000000n);
+      expect(await iptrade.spentIptOdometer()).to.equal(400000000000000000000n);
     })
 
     // test without sufficient funds after allowance
@@ -787,27 +819,22 @@ describe("IPtoken contract", function () {
   describe("Setting and getting the onlyOwnerHelper", function () {
 
     it("Should get the onlyOwnerHelper as owner", async function () {
-      expect(await iptrade.getHelper()).to.equal(owner.address);
-    })
-
-    it("... revert when not owner", async function () {
-      await expect(iptrade.connect(addr1).getHelper()).
-        to.be.revertedWith("owner or helper only");
+      expect(await iptrade.ONLY_OWNERHelper()).to.equal(owner.address);
     })
 
     it("Should set addr1 as onlyOwnerHelper", async function () {
       await iptrade.setHelper(addr1.address);
-      expect(await iptrade.getHelper()).to.equal(addr1.address);
+      expect(await iptrade.ONLY_OWNERHelper()).to.equal(addr1.address);
 
       // and the onlyOwnerHelper should have onlyOwner functionality
-      await iptrade.connect(addr1).setregisterIPCostIpt(123456789);
+      await iptrade.connect(addr1).setIPCostIpt(123456789, 1);
       expect(await iptrade.registerIPCostIpt()).to.equal(123456789);
     })
 
   })
 
 
-describe("Reentrancy", function () {
+  describe("Reentrancy", function () {
 
     beforeEach(async function () {
 
@@ -819,18 +846,22 @@ describe("Reentrancy", function () {
       const depositAmount = ethers.parseEther('1'); // Send 1 ETH
       await iptrade.connect(owner).deposit({ value: depositAmount });
       await iptrade.connect(addr1).deposit({ value: depositAmount });
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+await iptrade.depositIPT(100000000000000000000n);
       await iptrade.connect(addr1).setIP('f65a88a4d7e47905325c6b71495fc0b5', false, true);
 
       // and addr1 spends IPT
-      await ipToken.transfer(addr1.address, 10000000000000000000n,);
-      ipToken.connect(addr1).approveAmount(iptrade.target, 10000000000000000000n);
-      iptrade.connect(addr1).contractReceivesCredit(5000000000000000000n, addr1.address);
+      await ipToken.transfer(addr1.address, 1000000000000000000000n,);
+      ipToken.connect(addr1).approve(iptrade.target, 1000000000000000000000n);
+      iptrade.connect(addr1).depositIPT(500000000000000000000n);
+      await ipToken.approve(iptrade.target, 100000000000000000000n);
+await iptrade.depositIPT(100000000000000000000n);
       await iptrade.connect(addr1).setIP('f65a88a4d7e47905325c6b71495fc0b6', false, false);
 
       // Set the contract address in the attacker contract
       await attackerContract.setTargetContract(iptrade.target);
 
- 
+
     })
 
     // Trigger the reentrancy attack
@@ -860,23 +891,166 @@ describe("Reentrancy", function () {
 
 
   // check if we can burn
-  describe("Reentrancy", function () {
-  it("should burn tokens", async () => {
+  describe("Burn", function () {
+    it("should burn tokens", async () => {
 
-    // Get the initial balance of the account
-    const initialBalance = await ipToken.balanceOf(owner.address);
+      // Get the initial balance of the account
+      const initialBalance = await ipToken.balanceOf(owner.address);
 
-    // Specify the amount to burn
-    const burnAmount = 100n;
+      // Specify the amount to burn
+      const burnAmount = 100n;
 
-    // Burn tokens
-    await ipToken.burn(burnAmount);
-    console.log(burnAmount);
+      // Burn tokens
+      await ipToken.burn(burnAmount);
+      console.log(burnAmount);
 
-    // Verify the balance after burning using Chai
-    const finalBalance = await ipToken.balanceOf(owner.address);
-    console.log(finalBalance);
-    expect(finalBalance).to.equal(initialBalance - burnAmount, "Incorrect balance after burning");
-})
-})
+      // Verify the balance after burning 
+      const finalBalance = await ipToken.balanceOf(owner.address);
+      console.log(finalBalance);
+      expect(finalBalance).to.equal(initialBalance - burnAmount, "Incorrect balance after burning");
+    })
+  })
+
+
+
+  describe("No block reward", function () {
+      /* this was done with an original function to test what happens if the cap is reached
+    it("Should surpass the capped limit", async function () {
+      await ipToken.setBlockReward(9000000000000000000000000n);
+      await ipToken.transfer(addr1.address, 1000);
+      console.log(await(ipToken.totalMined()));
+      console.log(await(ipToken.totalSupply()));
+      console.log(await ipToken.getBlockReward());
+      await ipToken.setBlockReward(20000000000000000000000000n);
+      await expect(ipToken.transfer(addr1.address, 1000)).
+        to.be.revertedWith("ERC20Capped: cap exceeded");
+      await ipToken.setBlockReward(0);
+      await ipToken.transfer(addr1.address, 1000);
+      expect(await ipToken.balanceOf(addr1.address)).to.equal(2000);
+    })
+    */
+
+    it("Should return the block reward", async function () {
+      expect(await ipToken.blockReward()).to.equal(100000000000000000000n);
+    })
+  })
+
+  describe("Fallback", function () {
+
+    it("ipToken should not accept ether", async function () {
+      const depositAmount = ethers.parseEther('1');
+      await expect(addr1.sendTransaction({ to: ipToken.target, value: depositAmount })).to.be.revertedWith("Sending ether to this contract is not allowed")
+    })
+  })
+
+  describe("steal Ether or IPT", function () {
+    it("Transfers ETH from the contract", async function(){
+
+      /* will not work
+      // first get ether in the contract
+      const depositAmount = ethers.parseEther('1'); // Send 1 ETH
+      await iptrade.connect(owner).deposit({ value: depositAmount });
+      await iptrade.connect(addr1).deposit({ value: depositAmount });
+      expect (await iptrade.ethersInContract()).to.equal(2000000000000000000n);
+      // then send it to owner's wallet
+      
+      await (iptrade.address.sendTransaction({ to: owner.target, value: depositAmount }));
+      //expect (await iptrade.ethersInContract()).to.equal(1000000000000000000n);
+    */
+
+     // transfer IPT into the contract
+     await ipToken.transfer(addr2, 100000000000000000000n);
+     await ipToken.connect(addr2).transfer(iptrade.target, 100000000000000000000n);
+     expect (await ipToken.balanceOf(iptrade)).to.equal(100000000000000000000n);
+
+     // transfer back to owner
+     let before = await ipToken.balanceOf(owner);
+     await iptrade.withdrawSpentIpt();
+     expect (await ipToken.balanceOf(iptrade)).to.equal(0);
+     let after = await ipToken.balanceOf(owner);
+     expect (before + 100000000000000000000n).to.equal(after);
+
+    
+     // transfer through allowance and  depositIPT()
+     await ipToken.transfer(addr1, 100000000000000000000n);
+     await ipToken.connect(addr1).approve(iptrade, 100000000000000000000n );
+     await iptrade.connect(addr1).depositIPT(100000000000000000000n);
+     expect (await ipToken.balanceOf(iptrade)).to.equal(100000000000000000000n);
+
+     // transfer back to owner
+     await expect(iptrade.withdrawSpentIpt()).
+     to.be.revertedWith('no IPT');
+    })
+  })
+
+
+  //iptInContract
+  describe("iptInContract", function () {
+
+    beforeEach(async function () {
+      await ipToken.approve(iptrade.target, 1000000000000000000000n);
+      await ipToken.transfer(addr1,  1000000000000000000000n);
+      await ipToken.transfer(addr2,  1000000000000000000000n);
+      await iptrade.depositIPT(1000000000000000000000n);
+      await ipToken.connect(addr1).approve(iptrade.target, 1000000000000000000000n);
+      await ipToken.connect(addr2).approve(iptrade.target, 1000000000000000000000n);
+    })
+
+
+    it("deposits IPT", async function(){
+      await iptrade.connect(addr1).depositIPT(500000000000000000000n);
+      expect(await iptrade.iptInContract()).to.equal(1500000000000000000000n);
+      expect(await iptrade.connect(addr1).getIptBalance()).to.equal(500000000000000000000n);
+    })
+
+    //  userIptWithdrawal
+    it("userIptWithdrawal ", async function(){
+      await iptrade.connect(addr1).depositIPT(500000000000000000000n);
+      await iptrade.connect(addr1).userIptWithdrawal(500000000000000000000n);
+      expect(await iptrade.iptInContract()).to.equal(1000000000000000000000n);
+    })
+
+
+    //  setIP
+    it("setIP ", async function(){
+      await iptrade.connect(addr1).depositIPT(500000000000000000000n);
+      await iptrade.connect(addr1).setIP("d816f97b2046cf5cdb43d808ef1e1ab0", false, false);
+      // where are the IPT?
+      expect(await iptrade.iptInContract()).to.equal(1400000000000000000000n);
+      expect(await iptrade.connect(addr1).getIptBalance()).to.equal(400000000000000000000n);
+      expect(await iptrade.connect(owner).getIptBalance()).to.equal(900000000000000000000n);
+      expect(await iptrade.spentIptOdometer()).to.equal(100000000000000000000n);
+      expect(await ipToken.balanceOf(iptrade.target)).to.equal(1400000000000000000000n);
+    })
+
+    //  withdrawSpentIpt
+    it("withdrawSpentIpt", async function(){
+      await iptrade.connect(addr1).depositIPT(500000000000000000000n);
+      await expect (iptrade.withdrawSpentIpt()).to.be.revertedWith("no IPT");
+      expect(await iptrade.iptInContract()).to.equal(1500000000000000000000n);
+      ipToken.transfer(iptrade.target, 1000000000000000000000n);
+      expect(await iptrade.iptInContract()).to.equal(1500000000000000000000n);
+      expect(await ipToken.balanceOf(iptrade.target)).to.equal(2500000000000000000000n);
+      await iptrade.withdrawSpentIpt();
+      expect(await ipToken.balanceOf(iptrade.target)).to.equal(1500000000000000000000n);
+
+      // once again, now with an actual expenditure
+      ipToken.transfer(iptrade.target, 1000000000000000000000n);  // balance up, IPTinC not
+      await iptrade.connect(addr2).depositIPT(500000000000000000000n);  // + 500 IPTinC
+      await iptrade.connect(addr1).setIP("d816f97b2046cf5cdb43d808ef1e1ab0", false, false);  // + 100 spent, - 100 donated 
+      await iptrade.connect(addr1).sellerCreatesSalesIntent("d816f97b2046cf5cdb43d808ef1e1ab0", 100000000000000000000n, addr2, false, false); // + 200 spent 
+      await iptrade.connect(addr2).buyerBuysIP("d816f97b2046cf5cdb43d808ef1e1ab0", 100000000000000000000n, false, false); // - 100 donated , -100 paid (external)
+      expect (await ipToken.balanceOf(iptrade.target)).to.equal(2700000000000000000000n);// balance should be should be 1500 + 1000 + 500 - 100 -100 - 100
+      expect (await iptrade.iptInContract()).to.equal(1700000000000000000000n);// iptinContract should be 1500  + 500 - 100 -100 - 100
+      expect (await iptrade.spentIptOdometer()).to.equal(300000000000000000000n)// spentIPTOdometer should be 100 + 200
+      await iptrade.withdrawSpentIpt();  // remove 300 + 1000
+      expect (await ipToken.balanceOf(iptrade.target)).to.equal(1400000000000000000000n);// balance should be should be 1500 + 1000 + 500 - 100 -100 - 100
+      expect (await iptrade.iptInContract()).to.equal(1400000000000000000000n);// iptinContract should be 1500  + 500 - 100 -100 - 100
+      expect (await iptrade.spentIptOdometer()).to.equal(0)// spentIPTOdometer should be 100 + 200
+
+
+    })
+
+  })
+
 });

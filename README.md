@@ -1,6 +1,15 @@
-# Sample Hardhat Project
+# IPT and IPTrade project
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+## Content
+| Title |  Summary |
+| --- | --- |
+| For users | Project description, white paper, scenarios|
+| For developers | Section for run commands and technical updates (in the future) |
+
+## For users
+
+
+## For developers
 
 Try running some of the following tasks:
 

@@ -21,48 +21,61 @@ contract IPtrade is ReentrancyGuard{
     token variables
     */
     address payable public owner;
-    address private ONLY_OWNERHelper;
+    address public ONLY_OWNERHelper;
     IERC20 public token;
-    uint256 public initialTime;
 
     /* 
     public variables
     */
-    uint256 public  freeIpTokenwithdrawal  = 1 * (10 ** 18); // set?
-    uint256 public  registerIPCostIpt      = 1 * (10 ** 18); // set?
-    uint256 public  transferIPCostIpt      = 2 * (10 ** 18); // set?
-    uint256 public  registerIPCostEth      = 0.001 * (10 ** 18);  // set?
-    uint256 public  transferIPCostEth      = 0.002 * (10 ** 18);  // set?
-    uint256 public  lockTime               = 604800 seconds; // set?
+    uint256 public  freeIpTokenwithdrawal  = 100 * (10 ** 18); 
+    uint256 public  registerIPCostIpt      = 100 * (10 ** 18);
+    uint256 public  transferIPCostIpt      = 200 * (10 ** 18); 
+    uint256 public  registerIPCostEth      = 0.001 * (10 ** 18);  
+    uint256 public  transferIPCostEth      = 0.002 * (10 ** 18);  
+    uint256 public  lockTime               = 604800 seconds; 
     bool    public  freeTokensBool         = true;
-    uint256 private spentEtherOdometer     = 0; // private or public?
-    uint256 public  ethersInContract       = 0;
-    uint256 private spentIptOdometer       = 0; 
+    uint256 public  spentEtherOdometer     = 0;
+    uint256 public  ethersInContract       = 0;   // keeps track on ETH expenses and reducts from user accounts 
+    uint256 public  spentIptOdometer       = 0;   // keeps track on IPT expenses and reducts from user accounts 
     uint256 public  iptInContract          = 0;
 
 
     /* 
     events
     */
-    event Withdrawal(address indexed to, uint256 indexed amount);
+    event ETHWithdrawal(address indexed to, uint256 indexed amount);
+    event IPTWithdrawal(address indexed to, uint256 indexed amount);
     event EtherReceived(address indexed from, uint256 amount);
-
+    event IPTReceived(address from, uint256 amount);
+    event IPRegistered(address indexed owner, bytes32 indexed ipHash);
+    event SalesIntentCreated(address indexed seller, bytes32 indexed ipHash, uint256 salesPrice, address indexed buyer, bool isEther);
+    event SalesIntentCancelled(address indexed seller,  bytes32 indexed ipHash);
+    event IPTransferred(address indexed from, address indexed to, bytes32 indexed ipHash, bool isEther, uint256 amount);
+    event TokensRequested(address indexed requester, uint256 amount);
+    // Ether withdrawn by owner
+    event OwnerEtherWithdrawn(address indexed to, uint256 amount); 
+     // IPT withdrawn by owner
+    event OwnerIPTWithdrawn(address indexed to, uint256 amount);
+    
     /*
     structs
     */
+    // This struct contains data about IP owners
     struct IPowner {
+        bool    exists;
         address owner;
         uint256 creationTimeStamp;
-        bool    exists;
+
     }
 
+    // This struct contains data about IP on offer / for sale
     struct Onsale {
+        bool    exists;
+        bool    isEther;
         address owner_address;
         address buyer_address;
-        bool    isEther;
         uint256 salesPrice; 
         uint    creationTimeStamp;
-        bool    exists;
     } 
 
     /* 
@@ -87,232 +100,271 @@ contract IPtrade is ReentrancyGuard{
     /*
     translate variables ONLY_OWNERHelper functions
     */
-    //__md5Length tested
-    function checkMd5Length(string memory str) public pure returns (bool){
+    // checkMd5Length 
+    // Takes a string and reports if it is 32 bytes
+    function checkMd5Length(string memory str) internal pure returns (bool){
         bytes memory stringInBytes = bytes(str);
         uint256 strLength = stringInBytes.length;
         require (strLength == 32, "md5 incorr");
         return true;
     }
 
-    //__stringToBytes32 indirectly tested
-    function stringToBytes32(string memory str) public pure returns (bytes32) {
+    // stringToBytes32 
+    // Takes a string and returns it in32 bytes 
+    function stringToBytes32(string memory str) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(str));
     }
 
     /* 
     setter and getter variable functions, simple variables
     */
-
-    //__ONLY_OWNERHelper
-    //set  tested
+    // setHelper
+    // A function that the owner can use to assign a secondary owner with control over functions
     function setHelper(address _ONLY_OWNERHelper) external ONLY_OWNER{
         ONLY_OWNERHelper = _ONLY_OWNERHelper;
     }
 
-    //get tested
-    function getHelper () public view ONLY_OWNER returns (address){
-        return (ONLY_OWNERHelper);
-    }
-
-    //__WithdrawalAmount 
-    //set tested
+    // setFreeIpTokenwithdrawal 
+    // set the amount of Tokens that are freely dispensed as part of some functions
     function setFreeIpTokenwithdrawal(uint256 amount) external ONLY_OWNER{
         freeIpTokenwithdrawal = amount;
     }
 
 
-    //__LockTime 
-    //set tested
+    // setLockTime 
+    // set the locktime in seconds, for the faucet waiting time, or offer expiration period 
     function setLockTime(uint256 amount) external ONLY_OWNER{
         lockTime = amount * 1 seconds;
     }
 
 
-    //__FreetokensBool
-    //set tested
-    function setFreetokensBool (bool provide) external ONLY_OWNER{
-        freeTokensBool = provide;
+    // setFreetokensBool
+    // A bool to open or close the faucet, accepts true or false
+    function setFreetokensBool (bool _freeTokensBool) external ONLY_OWNER{
+        freeTokensBool = _freeTokensBool;
     }
  
 
-    //__IptRegistrationPrice
-    //set tested
-    function setregisterIPCostIpt(uint256 amount) external ONLY_OWNER{ //name it sales price
-        registerIPCostIpt = amount;
+    // setIPCostIpt
+    // set the cost for IP registration in IPT, paid to the contract owner
+    function setIPCostIpt(uint256 register, uint256 transfer) external ONLY_OWNER{ //name it sales price
+        registerIPCostIpt = register;
+        transferIPCostIpt = transfer;
     }
 
 
-    //__IptTransferPrice
-    //set tested
-    function setTransferIPCostIpt(uint256 amount) external ONLY_OWNER {
-        transferIPCostIpt = amount;
-    }
-
-
-    //__EthRegistrationPrice
-    //set tested
-    function setRegisterIPCostEth(uint256 amount) external ONLY_OWNER { //name it sales price
-        registerIPCostEth = amount;
-    }
-
-    //__EthTransferPrice
-    //set tested
-    function setTransferIPCostEth(uint256 amount) external ONLY_OWNER{
-        transferIPCostEth = amount;
+    // setIPCostEth 
+    // set the cost for IP registration in ETH, paid to the contract owner
+    function setIPCostEth(uint256 register, uint256 transfer) external ONLY_OWNER { //name it sales price
+        registerIPCostEth = register;
+        transferIPCostEth = transfer;    
     }
 
     /*
-    getter functions for variables set through usage
+    getter functions for state variables set through usage
     */
-    //__EtherCredit
-    //get tested
+    // getEtherCredit
+    // get the sender's credit in ETH in the contract
     function getEtherCredit() external view returns (uint256){
         return etherCredit[msg.sender];
     }
 
-    //__iptInContract tested
-    function getIptInContract() external view ONLY_OWNER returns (uint256){
-        return iptInContract;
-    } 
-
-    //__ethersInContract tested
-    function getEthersInContract() external view ONLY_OWNER returns (uint256){
-        return ethersInContract;
-    }
-
-    //__IP
-    //get tested
+    // getIP
+    // Check who is the owner of an IP, need to provide the MD5sum
     function getIP(string calldata str) external view returns (IPowner memory) {
-        require(checkMd5Length(str));
         bytes32 md5 = stringToBytes32(str);
-        return IPowner(md5s[md5].owner, md5s[md5].creationTimeStamp, md5s[md5].exists);
+        return IPowner( md5s[md5].exists, md5s[md5].owner, md5s[md5].creationTimeStamp);
     }
 
-    //__salesIntent
-    // get tested
+    // getSalesIntent
+    // Function check if an MD5sum is on sale, need to provide an MD5sum
     function getSalesIntent(string calldata str) external view returns (Onsale memory) {
-        require(checkMd5Length(str));
         bytes32 md5 = stringToBytes32(str);
-        return Onsale(onsale[md5].owner_address, onsale[md5].buyer_address, onsale[md5].isEther, onsale[md5].salesPrice, onsale[md5].creationTimeStamp, onsale[md5].exists);
+        return Onsale(onsale[md5].exists, onsale[md5].isEther, onsale[md5].owner_address, onsale[md5].buyer_address, onsale[md5].salesPrice, onsale[md5].creationTimeStamp);
     }
 
-    //__IpTransactions
-    //get 
+    // getIpTransactions
+    // follow which addresses an MD5sum has belonged to, returns an array where the current owner is the last address
     function getIpTransactions(string calldata str) external view returns (address[] memory) {
-        require(checkMd5Length(str));
         bytes32 md5 = stringToBytes32(str);
         return md5sTransactions[md5];
     }
 
-    //__AccountBalance
-    //get tested
+    // getIptBalance
+    // users can use this function to check their IPT credit in the contract
     function getIptBalance() external view returns (uint256){
         return (iptBalances[msg.sender]);
-    }
-
-    //__SpentIptOdometer
-    //get tested
-    function getSpentIptOdometer() external view ONLY_OWNER returns (uint256) {
-        return spentIptOdometer;
-    }
-
-    //__SpentEthOdometer
-    //get tested
-    function getSpentEthOdometer() external view ONLY_OWNER returns (uint256) {
-        return spentEtherOdometer;
     }
 
     /* 
     transfer functions
     */
-
-    //__requestTokens, a faucet function      tested, except address(0)
+    // requestTokens
+    // this is the contract's faucet
     function requestTokens() external nonReentrant {
-        // check
-        require(msg.sender != address(0), "request from 0");  
-        require(freeTokensBool == true, "faucet closed");
-        require(token.balanceOf(address(this)) >= freeIpTokenwithdrawal, "no IPT av");
-        require(block.timestamp >= nextAccessTime[msg.sender], "try later");
+        require(freeTokensBool      == true, "faucet closed");
+        require(block.timestamp     >= nextAccessTime[msg.sender], "try later");
+        require(msg.sender          != address(0), "request from 0");  
+        require(iptBalances[owner]  >= freeIpTokenwithdrawal, "no IPT av");
+        
         // set next access time
         nextAccessTime[msg.sender] = block.timestamp + lockTime;
+        
         // transfer
         token.transfer(msg.sender, freeIpTokenwithdrawal);
+        iptInContract       -= freeIpTokenwithdrawal;
+        iptBalances[owner]  -= freeIpTokenwithdrawal;
+         
+        // Emit TokensRequested event
+        emit TokensRequested(msg.sender, freeIpTokenwithdrawal);
     }
 
-    //__contractReceivesCredit  tested
-    // essential function for tranfers of IPT based on allowance
-    function contractReceivesCredit(uint256 amount, address selfAddress) public payable  {
-        // check
-        require(token.balanceOf(selfAddress) >= amount, "No funds");
-        require(token.allowance(selfAddress, address(this)) >= amount , "No allowance");
-        // collect the amount
-        token.transferFrom(selfAddress, address(this), amount);
+
+    // depositIPT
+    // This is an essential function for tranfers of IPT based on allowance
+    // IF users desire to pay from credit insted of allowance, they can tranfer 
+    // IPT into the contract through this function
+    function depositIPT(uint256 amount) external payable nonReentrant {
+        // Checks
+        require(token.balanceOf(msg.sender) >= amount, "No funds");    
+        require(token.allowance(msg.sender, address(this)) >= amount, "No allowance");
+
+        // Effects
         iptBalances[msg.sender] += amount;
-        iptInContract += amount;
+        iptInContract           += amount;
+
+        // Interaction
+        token.transferFrom(msg.sender, address(this), amount);
+
+        // Event Emission
+        emit IPTReceived(msg.sender, amount);
     }
 
-    //__deposit, tested
-    // a function to store Ether in the contract
-    function deposit() external payable  {  
+
+
+    // contractReceivesCredit
+    // This is an internal function for tranfers of IPT based on allowance
+    function contractReceivesCredit(uint256 amount, address selfAddress) private  {
+        // Checks
+        require(token.balanceOf(selfAddress) >= amount, "No funds");    
+        require(token.allowance(selfAddress, address(this)) >= amount, "No allowance");
+
+        // Effects
+        iptBalances[selfAddress] += amount;
+        iptInContract += amount;
+
+         // Interaction
+        token.transferFrom(selfAddress, address(this), amount);
+
+        // Event Emission
+        emit IPTReceived(selfAddress, amount);
+    }
+
+    // deposit
+    // The required function to store Ether in the contract
+    function deposit() external payable nonReentrant{  
         require(msg.value > 0, "not allow 0");
-       emit EtherReceived(msg.sender, msg.value);
+
+        // write ether to user account
         etherCredit[msg.sender] += msg.value;
         ethersInContract += msg.value;
+
+        // Eent emission
+        emit EtherReceived(msg.sender, msg.value);
    }
 
-    //__receive not tested
-    // the fallback option to store Ether in the contract
+    // fallback functions
+    // the fallback option to prevent sending Ether directy to the contract
     receive() external payable {
-        revert("Fallback function disabled. Use deposit() for Ether or contractReceivesCredit() for IPT.");
+        revert("Fallback function disabled. Use deposit() for Ether or depositIPT() for IPT.");
     }
     fallback() external payable {
-        revert("Fallback function disabled. Use deposit() for Ether or contractReceivesCredit() for IPT.");
+        revert("Fallback function disabled. Use deposit() for Ether or depositIPT() for IPT.");
     }
 
-    //__userEtherWithdrawal tested
-    // user can withdraw some Ether
+    // userEtherWithdrawal
+    // A function for users to withdraw (part of) their Ether credit
     function userEtherWithdrawal(uint256 amount) external payable nonReentrant {
         require (etherCredit[msg.sender] >= amount, "no ETH");
+
+        // pay
         etherCredit[msg.sender] -= amount;
         payable(msg.sender).transfer(amount); 
+
+        // adjust Ether in contract
         ethersInContract -= amount;
+
         // Emit the Withdrawal event with the amount
-        emit Withdrawal(msg.sender, amount);
+        emit ETHWithdrawal(msg.sender, amount);
     }
 
-    //__userIptWithdrawal tested
-    // user can withdraw some IPT
+    // userIptWithdrawal
+    // A function for users to withdraw (part of) their IPT credit
     function userIptWithdrawal(uint256 amount) external nonReentrant {
         require(iptBalances[msg.sender] >= amount, "no IPT");
+
+        // pay
         iptBalances[msg.sender] -= amount;
         token.transfer(msg.sender, amount);
+
+        // adjust ipt contract
         iptInContract -= amount;
+
+        // Emit the Withdrawal event with the amount
+        emit IPTWithdrawal(msg.sender, amount);
     }
 
-    //__withdrawSpentEth tested
-    // owner can withdraw spent Ether
+    // withdrawSpentEth
+    // A function for the owner(helper) to withdraw all ETH that is earned from IP registrations to the owner address
     function withdrawSpentEth() external ONLY_OWNER nonReentrant{
         require(spentEtherOdometer > 0, "no ETH");
-        emit Withdrawal(owner, spentEtherOdometer);
-        owner.transfer(spentEtherOdometer);
+
         ethersInContract -= spentEtherOdometer;
+        owner.transfer(spentEtherOdometer);
         spentEtherOdometer = 0;
+     
+        // Emit EtherWithdrawn event
+        emit OwnerEtherWithdrawn(owner, spentEtherOdometer);
+
     }
 
-    //__withdrawSpentCoins tested
-    // owner can withdraw spent coins
+    // withdrawSpentIpt
+    // A function for the owner(helper) to withdraw all IPT that is earned from IP registrations to the owner address
+    // owner withdraws spent IPT and a potential surplus of IPT (when not transferred through depositIPT())
     function withdrawSpentIpt() external ONLY_OWNER nonReentrant{
-        require(spentIptOdometer > 0, "no IPT");
-        token.transfer(owner, spentIptOdometer);
+        
+        // set local transferNow varaible
+        uint256 transferNow = spentIptOdometer;
+
+        // also get the unregistered IPT back (transferred for Faucet)
+        uint256 totalIPTBalance = token.balanceOf(address(this));
+        if (totalIPTBalance - iptInContract > 0){
+            transferNow = transferNow + totalIPTBalance - iptInContract;
+        }
+        require(transferNow > 0, "no IPT");
         iptInContract -= spentIptOdometer;
+        token.transfer(owner, transferNow);
         spentIptOdometer = 0;
+
+        // Emit IPTWithdrawn event
+        emit OwnerIPTWithdrawn(owner, transferNow);
     }
+
 
     /*
     IP registration and transfer functions
     */
-    //__setIP tested
+    // setIP
+    // The function to set the IP inside the contract/
+
+    // The IP holder should provide 
+    // - the MD5sum, 
+    // - a true/false if the registration is paid on IPT approval, 
+    // - and a true/false if teh registration is paid in ETH
+    //
+    // If onApproval is true, the payment cannot be done in ETH
+    // If onApproval is true, the IP holder should have approved the payment through the IPT apporval function:
+    // ipToken.connect(IP-HOLDER-ADDRESS).approve(IPTRADE-ADDRESS, REGISTRATION FEE);
     function setIP(string calldata str, bool onApproval, bool isEther) external nonReentrant {
         require(!(onApproval && isEther), "cant approve ETH");
         require(checkMd5Length(str));
@@ -346,22 +398,52 @@ contract IPtrade is ReentrancyGuard{
             spentEtherOdometer      += registerIPCostEth;
         }
         // store the md5 (key) to the address (value)
+        md5s[md5].exists            = true;
         md5s[md5].owner             =  msg.sender; 
         md5s[md5].creationTimeStamp = block.timestamp;
-        md5s[md5].exists = true;
         md5sTransactions[md5].push(msg.sender);
+
+        // provide free tokens
+        if(freeTokensBool      == true){
+            if (iptBalances[owner]  >= freeIpTokenwithdrawal){
+                token.transfer(msg.sender, freeIpTokenwithdrawal);
+                iptInContract       -= freeIpTokenwithdrawal;
+                iptBalances[owner]  -= freeIpTokenwithdrawal;
+                emit TokensRequested(msg.sender, freeIpTokenwithdrawal);
+            }
+        }
+
+        // Emit IPRegistered event
+        emit IPRegistered(msg.sender, md5);
     }
 
-    //__sellerCreatesSalesIntent tested
-    // The seller has agreed wit a buyer and now creates an onsale object to transfer the IP
+    // sellerCreatesSalesIntent
+    // The seller has agreed with a buyer and now creates an onsale object to transfer the IP
+    // They use this function for this
+
+    // The IP holder should provide 
+    // - the MD5sum, 
+    // - the sales price in IPT or ETH (remember that both coins have 18 decimals, meaning "1 equals 1*10-18 ETH or IPT")
+    // - the address of the buyer
+    // - a true/false if the IP transfer is paid on IPT approval, 
+    // - and a true/false if IP transfer is paid in ETH
+
+    // It is important to note that the currency for the sales price (which will go from buyer to seller) 
+    // is the same as the currency for the transfer (which will go from seller to the contract owner)
+    //
+    // If onApproval is true, the payment cannot be done in ETH
+    // If onApproval is true, the IP holder should have approved the payment through the IPT apporval function:
+    // ipToken.connect(IP-HOLDER-ADDRESS).approve(IPTRADE-ADDRESS, REGISTRATION FEE);
+
+
     function sellerCreatesSalesIntent (string calldata str, uint256 salesPrice, address buyerAddress, bool onApproval, bool isEther) external nonReentrant {
         // needs to be the md5 owner
         require(checkMd5Length(str));
         bytes32 md5 = stringToBytes32(str);
         require (md5s[md5].owner != address(0), "ip not exist");
         require (md5s[md5].owner == msg.sender, "not owner");
-        require (!(onApproval && isEther), "cant approve ETH");
-        require (onsale[md5].exists == false, "not exists or for sale");  // still need to test
+        require (!(onApproval && isEther),      "cant approve ETH");
+        require (onsale[md5].exists == false,   "not exists or for sale");  // still need to test
 
 
         // prepare coin check and transfer payment paid by current owner
@@ -390,11 +472,17 @@ contract IPtrade is ReentrancyGuard{
             spentEtherOdometer += transferIPCostEth;
         }
         // set the onsale instance
-        onsale[md5]= Onsale(msg.sender, buyerAddress, isEther, salesPrice, block.timestamp, true);
+        onsale[md5]= Onsale(true, isEther, msg.sender, buyerAddress, salesPrice, block.timestamp);
+
+        // Emit SalesIntentCreated event
+        emit SalesIntentCreated(msg.sender, md5, salesPrice, buyerAddress, isEther);
     }  
     
 
-    //__sellerCancelsSalesIntent   tested
+    // sellerCancelsSalesIntent   
+    // A function to revoke the sales offer
+    // It can only be successfully run when the time elapsed since creating the offer
+    // has surpassed the lockTime
     function sellerCancelsSalesIntent(string calldata str) external  {
         require(checkMd5Length(str));
         bytes32 md5 = stringToBytes32(str);
@@ -409,17 +497,33 @@ contract IPtrade is ReentrancyGuard{
         onsale[md5].salesPrice = 0;
         onsale[md5].creationTimeStamp = 0;
         onsale[md5].exists = false;
+
+        // Emit SalesIntentCancelled event
+        emit SalesIntentCancelled(msg.sender, md5);
     }
 
-    //__buyerBuysIP  tested_almost
-    function buyerBuysIP(uint256 salesPrice, string calldata str, bool onApproval,  bool isEther) external nonReentrant {
+    // buyerBuysIP 
+    // The function to tranfer the IP to the buyer
+    // The buyer runs this function with the following input:
+    // 
+    // - the salesprice, which should be the agreed sales price (remember that both coins have 18 decimals, meaning "1 equals 1*10-18 ETH or IPT")
+    // - the MD5sum
+    // - a true/false if the IP transfer is paid on IPT approval, 
+    // - and a true/false if IP transfer is paid in ETH
+
+    // If onApproval is true, the payment cannot be done in ETH
+    // If onApproval is true, the IP holder should have approved the payment through the IPT apporval function:
+    // ipToken.connect(IP-HOLDER-ADDRESS).approve(IPTRADE-ADDRESS, REGISTRATION FEE);
+
+    // The money is trabnferred to the seller through the contract
+
+    function buyerBuysIP(string calldata str, uint256 salesPrice, bool onApproval, bool isEther) external nonReentrant {
         require(checkMd5Length(str));
         bytes32 md5 = stringToBytes32(str);
         require (!(onApproval && isEther), "cant approve ETH");
         require(onsale[md5].buyer_address ==  msg.sender, "not buyer");
         require(onsale[md5].salesPrice == salesPrice, "incorrect price");
         require(isEther == onsale[md5].isEther, "wrong currency");
-        require (block.timestamp < onsale[md5].creationTimeStamp + lockTime, "expired");
 
         if (onsale[md5].isEther == false){
             if (onApproval == false){
@@ -427,13 +531,13 @@ contract IPtrade is ReentrancyGuard{
                 require (iptBalances[msg.sender] >= salesPrice);
                 require (iptInContract          >= salesPrice); // coins available in contract
                 // transfer the coins to the seller
-                iptBalances[msg.sender]  -= salesPrice;
-                iptInContract -= salesPrice;
+                iptBalances[msg.sender]         -= salesPrice;
+                iptInContract                   -= salesPrice;
                 token.transfer(onsale[md5].owner_address, salesPrice);
             }
             if (onApproval == true){
                 // check approval
-                require (token.allowance(msg.sender, onsale[md5].owner_address) >= salesPrice, "no allowance");
+                require (token.allowance(msg.sender, address(this)) >= salesPrice, "no allowance");
                 require (token.balanceOf(msg.sender) >= salesPrice, "no funds");
                 // get paid
                 token.transferFrom(msg.sender, onsale[md5].owner_address, salesPrice);
@@ -442,11 +546,13 @@ contract IPtrade is ReentrancyGuard{
         if (onsale[md5].isEther == true){
             require(etherCredit[msg.sender]>= salesPrice, "no funds");
             require(ethersInContract >= salesPrice,  "no ETH here");
-            address currentOwner = md5s[md5].owner;
+            address payable currentOwner = payable(md5s[md5].owner);
+
+            // transfer
+             currentOwner.transfer(salesPrice);
 
             // remove credit    
             etherCredit[msg.sender]   -= salesPrice;
-            etherCredit[currentOwner] += salesPrice;
             ethersInContract          -= salesPrice;
         }
 
@@ -459,6 +565,19 @@ contract IPtrade is ReentrancyGuard{
         onsale[md5].salesPrice = 0;
         onsale[md5].creationTimeStamp = 0;
         onsale[md5].exists = false;
+
+        // provide free tokens
+        if(freeTokensBool      == true){
+            if (iptBalances[owner]  >= freeIpTokenwithdrawal){
+                token.transfer(msg.sender, freeIpTokenwithdrawal);
+                iptInContract       -= freeIpTokenwithdrawal;
+                iptBalances[owner]  -= freeIpTokenwithdrawal;
+                emit TokensRequested(msg.sender, freeIpTokenwithdrawal);
+            }
+        }
+
+        // Emit events
+        emit IPTransferred(onsale[md5].owner_address, msg.sender, md5, onsale[md5].isEther, salesPrice);
     }
 
     //__ONLY_OWNER and helper tested
@@ -466,9 +585,4 @@ contract IPtrade is ReentrancyGuard{
         require( msg.sender == owner || msg.sender == ONLY_OWNERHelper, "owner or helper only");
         _;
     }
-
-
 }
-
-
-
