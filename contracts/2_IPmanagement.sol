@@ -229,12 +229,12 @@ contract IPtrade is ReentrancyGuard{
         require(token.balanceOf(msg.sender) >= amount, "No funds");    
         require(token.allowance(msg.sender, address(this)) >= amount, "No allowance");
 
+        // Interaction
+        token.transferFrom(msg.sender, address(this), amount);
+
         // Effects
         iptBalances[msg.sender] += amount;
         iptInContract           += amount;
-
-        // Interaction
-        token.transferFrom(msg.sender, address(this), amount);
 
         // Event Emission
         emit IPTReceived(msg.sender, amount);
@@ -244,20 +244,20 @@ contract IPtrade is ReentrancyGuard{
 
     // contractReceivesCredit
     // This is an internal function for tranfers of IPT based on allowance
-    function contractReceivesCredit(uint256 amount, address selfAddress) private  {
+    function contractReceivesCredit(uint256 amount, address payerAddress) private  {
         // Checks
-        require(token.balanceOf(selfAddress) >= amount, "No funds");    
-        require(token.allowance(selfAddress, address(this)) >= amount, "No allowance");
-
-        // Effects
-        iptBalances[selfAddress] += amount;
-        iptInContract += amount;
+        require(token.balanceOf(payerAddress) >= amount, "No funds");    
+        require(token.allowance(payerAddress, address(this)) >= amount, "No allowance");
 
          // Interaction
-        token.transferFrom(selfAddress, address(this), amount);
+        token.transferFrom(payerAddress, address(this), amount);
+
+        // Effects
+        iptBalances[payerAddress] += amount;
+        iptInContract += amount;
 
         // Event Emission
-        emit IPTReceived(selfAddress, amount);
+        emit IPTReceived(payerAddress, amount);
     }
 
     // deposit
@@ -287,7 +287,7 @@ contract IPtrade is ReentrancyGuard{
     function userEtherWithdrawal(uint256 amount) external payable nonReentrant {
         require (etherCredit[msg.sender] >= amount, "no ETH");
 
-        // pay
+        // pay and adjust credit
         etherCredit[msg.sender] -= amount;
         payable(msg.sender).transfer(amount); 
 
@@ -303,7 +303,7 @@ contract IPtrade is ReentrancyGuard{
     function userIptWithdrawal(uint256 amount) external nonReentrant {
         require(iptBalances[msg.sender] >= amount, "no IPT");
 
-        // pay
+        // pay and adjust credit
         iptBalances[msg.sender] -= amount;
         token.transfer(msg.sender, amount);
 
@@ -371,7 +371,7 @@ contract IPtrade is ReentrancyGuard{
         bytes32 md5 = stringToBytes32(str);
         require(md5s[md5].exists == false, "is registered" ); 
         if (isEther == false){
-            if(onApproval == false){
+            if(onApproval == false){  // on credit in contract
                 // check credits
                 require(iptBalances[msg.sender] >= registerIPCostIpt, "no IPT");
 
@@ -467,6 +467,7 @@ contract IPtrade is ReentrancyGuard{
         if (isEther == true){
             // check credits
             require(etherCredit[msg.sender]>= transferIPCostEth, "no ETH");
+
             // remove credit    
             etherCredit[msg.sender] -= transferIPCostEth;
             spentEtherOdometer += transferIPCostEth;

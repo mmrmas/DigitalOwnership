@@ -1023,6 +1023,62 @@ await iptrade.depositIPT(100000000000000000000n);
       expect(await ipToken.balanceOf(iptrade.target)).to.equal(1400000000000000000000n);
     })
 
+    //  setIP wo freetokens
+    it("setIP ", async function(){
+      await iptrade.connect(addr1).depositIPT(500000000000000000000n);
+      await iptrade.setFreetokensBool(false);
+      // where are the IPT?
+      await iptrade.connect(addr1).setIP("d816f97b2046cf5cdb43d808ef1e1ab0", false, false);
+      expect(await iptrade.iptInContract()).to.equal(1500000000000000000000n);
+      expect(await iptrade.connect(addr1).getIptBalance()).to.equal(400000000000000000000n);
+      expect(await iptrade.connect(owner).getIptBalance()).to.equal(1000000000000000000000n);
+      expect(await iptrade.spentIptOdometer()).to.equal(100000000000000000000n);
+      expect(await ipToken.balanceOf(iptrade.target)).to.equal(1500000000000000000000n);
+    })
+
+      //  setIP wit approval
+      it("setIP on approval ", async function(){
+        await iptrade.connect(addr1).depositIPT(500000000000000000000n);
+        // where are the IPT?
+        await iptrade.connect(addr1).setIP("d816f97b2046cf5cdb43d808ef1e1ab0", true, false);
+        expect(await iptrade.iptInContract()).to.equal(1500000000000000000000n);
+        expect(await iptrade.connect(addr1).getIptBalance()).to.equal(500000000000000000000n);
+        expect(await iptrade.connect(owner).getIptBalance()).to.equal(900000000000000000000n);
+        expect(await iptrade.spentIptOdometer()).to.equal(100000000000000000000n);
+        expect(await ipToken.balanceOf(iptrade.target)).to.equal(1500000000000000000000n);
+      })
+
+       //  setIP with Ether
+      it("setIP with ether ", async function(){
+      const depositAmount = ethers.parseEther('1'); // Send 1 ETH
+      await iptrade.connect(addr1).deposit({ value: depositAmount });
+      await iptrade.connect(addr1).depositIPT(500000000000000000000n);
+      await iptrade.connect(addr1).setIP("d816f97b2046cf5cdb43d808ef1e1ab0", false, true);
+      // where are the IPT?
+      expect(await iptrade.iptInContract()).to.equal(1400000000000000000000n);
+      expect(await iptrade.connect(addr1).getIptBalance()).to.equal(500000000000000000000n);
+      expect(await iptrade.connect(owner).getIptBalance()).to.equal(900000000000000000000n);
+      expect(await iptrade.spentIptOdometer()).to.equal(0);
+      expect(await ipToken.balanceOf(iptrade.target)).to.equal(1400000000000000000000n);
+      // where are the ETH?
+      expect(await iptrade.connect(addr1).getEtherCredit()).to.equal(999000000000000000n);
+      expect(await iptrade.connect(owner).getEtherCredit()).to.equal(0n);
+      expect(await iptrade.spentEtherOdometer()).to.equal(1000000000000000n);
+      expect(await ethers.provider.getBalance(iptrade.target)).to.equal(1000000000000000000n);
+      expect(await iptrade.ethersInContract()).to.equal(1000000000000000000n);
+      // remove as user
+      await iptrade.connect(addr1).userEtherWithdrawal(999000000000000000n);
+      expect(await iptrade.connect(addr1).getEtherCredit()).to.equal(0n);
+      expect(await iptrade.ethersInContract()).to.equal(1000000000000000n);
+      // remove spentEther
+      await iptrade.withdrawSpentEth();
+      expect(await iptrade.ethersInContract()).to.equal(0);
+      expect(await iptrade.spentEtherOdometer()).to.equal(0);
+      expect(await ethers.provider.getBalance(iptrade.target)).to.equal(0);
+    })
+
+
+
     //  withdrawSpentIpt
     it("withdrawSpentIpt", async function(){
       await iptrade.connect(addr1).depositIPT(500000000000000000000n);
@@ -1048,9 +1104,24 @@ await iptrade.depositIPT(100000000000000000000n);
       expect (await iptrade.iptInContract()).to.equal(1400000000000000000000n);// iptinContract should be 1500  + 500 - 100 -100 - 100
       expect (await iptrade.spentIptOdometer()).to.equal(0)// spentIPTOdometer should be 100 + 200
 
-
     })
 
   })
+
+  
+});
+
+
+describe("IPToken Contract", function () {
+  let IPToken;
+  let ipToken;
+  let owner;
+  const cap = 100000000; // 100 IPT cap
+
+  beforeEach(async function () {
+      [owner] = await ethers.getSigners();
+      const IPTokenFactory = await ethers.getContractFactory("IPToken");
+      ipToken = await IPTokenFactory.deploy(cap, 0, 0); // No tokens minted at launch, no block reward
+  });
 
 });
