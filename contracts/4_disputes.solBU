@@ -1,0 +1,60 @@
+// SPDX-License-Identifier: MIT
+// contracts/IPmanagement.sol
+
+pragma solidity ^0.8.20;
+
+import "2_IPmanagement.sol";
+
+
+
+
+    struct Claim {
+        bool exists;
+        address claimer;
+        string status;
+    }
+
+
+
+
+    // file a claim
+    // anyone can file a claim who believes that they own a certain md5sum
+    // After filing a claim, the md5 is marked as "disputed" until the defendant admits
+    // or the claimer removes the claim
+    // the claimer should broadly publicize the fact that they are claiming, by:
+    // - pointing towards their claim on the IPtrade site
+    // - providing evidence that they were earlier
+    //  - explaining how the defendant could have obtained their knowledge
+    // This has no further consequences, onky that it helps due dilligence processes 
+        function file_a_claim(
+        string md5sum
+        ) external nonReentrant{
+        
+        // check if md5
+        require(checkMd5Length(str));
+        bytes32 md5 = stringToBytes32(str);
+        require( !Claim[md5].exists, "Already being claimed");
+
+        // check if md5 belongs to someone
+        md5s[md5].exists = true;
+   
+        // if for sale, cancel it
+        onsale[md5].exists = false;
+
+        //store claim (claim - md5 - address - active)
+        Claim[md5].exists = true;
+        Claim[md5].claimer = msg.sender;
+        Claim[md5].status = "active";
+        }
+
+
+respond_to_claim(md5, give_in_bool){
+# check if owner
+if(true){md5 -> new owner, delete claim, emit}
+if(false){(claim - md5 - address - unresolved)}
+}
+
+delete claim (md5){
+claim holder should be claimer
+delete claim
+}

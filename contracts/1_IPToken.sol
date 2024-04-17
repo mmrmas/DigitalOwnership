@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 
 contract IPToken is ERC20Capped, ERC20Burnable {
-    address payable public owner;
     uint256 public blockReward;
     uint256 public totalMined;
 
@@ -21,7 +20,6 @@ contract IPToken is ERC20Capped, ERC20Burnable {
         uint256 mintAtLaunch,
         uint256 reward
     ) ERC20("IPToken", "IPT") ERC20Capped(cap * (10 ** 18)) {
-        owner = payable(msg.sender);
         myMint(msg.sender, mintAtLaunch * (10 ** 18));
         blockReward = reward * (10 ** 18);
         totalMined = mintAtLaunch * (10 ** 18);
@@ -33,7 +31,7 @@ contract IPToken is ERC20Capped, ERC20Burnable {
     //__myMint 
     // limit minting to capped amount
     // FROM: @dev See {ERC20-_mint}.
-    function myMint(address account, uint256 amount) internal {
+    function myMint(address account, uint256 amount) private {
         require(
             ERC20.totalSupply() + amount <= cap(),
             "ERC20Capped: cap exceeded"

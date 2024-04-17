@@ -43,9 +43,9 @@ contract IPtrade is ReentrancyGuard {
     /* 
     public variables
     */
-    uint256 public freeIpTokenwithdrawal = 5000 * (10 ** 18);
+    uint256 public freeIpTokenwithdrawal = 100 * (10 ** 18);
     uint256 public registerIPCostIpt = 100 * (10 ** 18);
-    uint256 public transferIPCostIpt = 100 * (10 ** 18);
+    uint256 public transferIPCostIpt = 200 * (10 ** 18);
     uint256 public lockTime = 604800 seconds;
     bool public freeTokensBool = true;
     uint256 public spentIptOdometer = 0; // keeps track on IPT expenses and reducts from user accounts
@@ -55,56 +55,48 @@ contract IPtrade is ReentrancyGuard {
     events
     */
     event IPTWithdrawal(
-        address  to, 
-        uint256  amount,
-         uint256 timestamp
+        address indexed to, 
+        uint256 indexed amount
     );
     event IPTReceived(
         address from, 
-        uint256 amount,
-         uint256 timestamp
+        uint256 amount
     );
     event IPRegistered(
-        address  owner, 
-        string  sha512,
-        uint256 timestamp
+        address indexed owner, 
+        string indexed md5
     );
     event SalesIntentCreated(
-        address  seller,
-        string  sha512,
-        uint256 timestamp
+        address indexed seller,
+        string indexed md5,
+        uint256 salesPrice,
+        address indexed buyer
     );
     event SalesIntentCancelled(
-        address  seller, 
-        string  sha512,
-        uint256 timestamp
+        address indexed seller, 
+        string indexed md5
     );
     event IPTransferred(
-        address  from,
-        address  to,
-        string  sha512,
-        uint256 amount,
-        uint256 timestamp
+        address indexed from,
+        address indexed to,
+        string indexed md5,
+        uint256 amount
     );
     event TokensRequested(
-        address  requester, 
-        uint256 amount,
-        uint256 timestamp
+        address indexed requester, 
+        uint256 amount
     );
     event OwnerSpentIPTWithdrawn(
-        address  to, 
-        uint256 amount,
-        uint256 timestamp
+        address indexed to, 
+        uint256 amount
     );
     event OwnerLostIPTWithdrawn(
-        address  to, 
-        uint256 amount,
-        uint256 timestamp
+        address indexed to, 
+        uint256 amount
     );
     event IpDeleted(
-        address  ipowner,
-        string  sha512,
-        uint256 timestamp
+        address indexed ipowner,
+        string indexed md5
     );
 
     /*
@@ -126,14 +118,12 @@ contract IPtrade is ReentrancyGuard {
         uint creationTimeStamp;
     }
 
-
-
     /* 
     mappings
     */
     mapping(address => uint256) private iptBalances;
-    mapping(bytes32 => IPowner) private sha512s;
-    mapping(bytes32 => address[]) private sha512sTransactions;
+    mapping(bytes32 => IPowner) private md5s;
+    mapping(bytes32 => address[]) private md5sTransactions;
     mapping(address => uint256) private lastAccessTime;
     mapping(bytes32 => Onsale) private onsale;
 
@@ -149,14 +139,12 @@ contract IPtrade is ReentrancyGuard {
     /*
     translate variables functions TEST
     */
-    // checkSha512Length
+    // checkMd5Length
     // Takes a string and reports if it is 32 bytes
-    function checkSha512Length(
-        string memory str
-    ) internal pure returns (bool) {
+    function checkMd5Length(string memory str) internal pure returns (bool) {
         bytes memory stringInBytes = bytes(str);
         uint256 strLength = stringInBytes.length;
-        require(strLength == 128, "sha512 incorr");
+        require(strLength == 32, "md5 incorr");
         return true;
     }
 
@@ -174,41 +162,31 @@ contract IPtrade is ReentrancyGuard {
 
     // setOWner TEST
     // A function that the owner can use to assign a secondary owner with control over functions
-    function setNewOwner(
-        address payable new_owner) 
-    external ONLY_OWNER {
+    function setNewOwner(address payable new_owner) external ONLY_OWNER {
         owner = new_owner;
     }
 
     // setHelper
     // A function that the owner can use to assign a secondary owner with control over functions
-    function setHelper(
-        address _ONLY_OWNERHelper) 
-    external ONLY_OWNER {
+    function setHelper(address _ONLY_OWNERHelper) external ONLY_OWNER {
         ONLY_OWNERHelper = _ONLY_OWNERHelper;
     }
 
     // setFreeIpTokenwithdrawal
     // set the amount of Tokens that are freely dispensed as part of some functions
-    function setFreeIpTokenwithdrawal(
-        uint256 amount) 
-    external ONLY_OWNER {
+    function setFreeIpTokenwithdrawal(uint256 amount) external ONLY_OWNER {
         freeIpTokenwithdrawal = amount;
     }
 
     // setLockTime
     // set the locktime in seconds, for the faucet waiting time, or offer expiration period
-    function setLockTime(
-        uint256 amount) 
-    external ONLY_OWNER {
+    function setLockTime(uint256 amount) external ONLY_OWNER {
         lockTime = amount * 1 seconds;
     }
 
     // setFreetokensBool
     // A bool to open or close the faucet, accepts true or false
-    function setFreetokensBool(
-        bool _freeTokensBool) 
-    external ONLY_OWNER {
+    function setFreetokensBool(bool _freeTokensBool) external ONLY_OWNER {
         freeTokensBool = _freeTokensBool;
     }
 
@@ -229,17 +207,15 @@ contract IPtrade is ReentrancyGuard {
 
     // getIP
     // Check who is the owner of an IP, need to provide the MD5sum
-    function getIP(
-        string calldata str) 
-    external view returns (IPowner memory) {
-        require(checkSha512Length(str));
-        bytes32 sha512 = stringToBytes32(str);
-        require(sha512s[sha512].exists, "IP does not exist");
+    function getIP(string calldata str) external view returns (IPowner memory) {
+        require(checkMd5Length(str));
+        bytes32 md5 = stringToBytes32(str);
+        require(md5s[md5].exists, "IP does not exist");
         return
             IPowner(
-                sha512s[sha512].exists,
-                sha512s[sha512].owner,
-                sha512s[sha512].creationTimeStamp
+                md5s[md5].exists,
+                md5s[md5].owner,
+                md5s[md5].creationTimeStamp
             );
     }
 
@@ -248,15 +224,15 @@ contract IPtrade is ReentrancyGuard {
     function getSalesIntent(
         string calldata str
     ) external view returns (Onsale memory) {
-        bytes32 sha512 = stringToBytes32(str);
-        require(onsale[sha512].exists, "Not for sale");
+        bytes32 md5 = stringToBytes32(str);
+        require(onsale[md5].exists, "Not for sale");
         return
             Onsale(
-                onsale[sha512].exists,
-                onsale[sha512].owner_address,
-                onsale[sha512].buyer_address,
-                onsale[sha512].salesPrice,
-                onsale[sha512].creationTimeStamp
+                onsale[md5].exists,
+                onsale[md5].owner_address,
+                onsale[md5].buyer_address,
+                onsale[md5].salesPrice,
+                onsale[md5].creationTimeStamp
             );
     }
 
@@ -265,8 +241,8 @@ contract IPtrade is ReentrancyGuard {
     function getIpTransactions(
         string calldata str
     ) external view returns (address[] memory) {
-        bytes32 sha512 = stringToBytes32(str);
-        return sha512sTransactions[sha512];
+        bytes32 md5 = stringToBytes32(str);
+        return md5sTransactions[md5];
     }
 
     // getIptBalance
@@ -295,7 +271,7 @@ contract IPtrade is ReentrancyGuard {
         iptBalances[owner] -= freeIpTokenwithdrawal;
 
         // Emit TokensRequested event
-        emit TokensRequested(msg.sender, freeIpTokenwithdrawal, block.timestamp);
+        emit TokensRequested(msg.sender, freeIpTokenwithdrawal);
     }
 
     // depositIPT
@@ -318,7 +294,7 @@ contract IPtrade is ReentrancyGuard {
         iptInContract += amount;
 
         // Event Emission
-        emit IPTReceived(msg.sender, amount, block.timestamp);
+        emit IPTReceived(msg.sender, amount);
     }
 
     // contractReceivesCredit
@@ -342,7 +318,7 @@ contract IPtrade is ReentrancyGuard {
         iptInContract += amount;
 
         // Event Emission
-        emit IPTReceived(payerAddress, amount, block.timestamp);
+        emit IPTReceived(payerAddress, amount);
     }
 
 
@@ -373,11 +349,12 @@ contract IPtrade is ReentrancyGuard {
         iptInContract -= amount;
 
         // Emit the Withdrawal event with the amount
-        emit IPTWithdrawal(msg.sender, amount, block.timestamp);
+        emit IPTWithdrawal(msg.sender, amount);
     }
 
     // withdrawSpentIpt
     // A function for the owner(helper) to withdraw all IPT that is earned from IP registrations to the owner address
+    // owner withdraws spent IPT and a potential surplus of IPT (when not transferred through depositIPT())
     function withdrawSpentIpt() external ONLY_OWNER nonReentrant {
         // set local transferNow varaible
         require(spentIptOdometer > 0, "no IPT");
@@ -386,7 +363,7 @@ contract IPtrade is ReentrancyGuard {
         spentIptOdometer = 0;
 
         // Emit IPTWithdrawn event
-        emit OwnerSpentIPTWithdrawn(owner, spentIptOdometer, block.timestamp);
+        emit OwnerSpentIPTWithdrawn(owner, spentIptOdometer);
     }
 
     // recover UnregisteredIPT
@@ -398,7 +375,7 @@ contract IPtrade is ReentrancyGuard {
         token.transfer(owner, transferNow);
 
         // Emit IPTWithdrawn event
-        emit OwnerLostIPTWithdrawn(owner, transferNow, block.timestamp);
+        emit OwnerLostIPTWithdrawn(owner, transferNow);
     }
 
     /*
@@ -411,16 +388,14 @@ contract IPtrade is ReentrancyGuard {
     // - the MD5sum,
     // - a true/false if the registration is paid on IPT approval,
     // - and a true/false if teh registration is paid in ETH
+    //
     // If onApproval is true, the payment cannot be done in ETH
     // If onApproval is true, the IP holder should have approved the payment through the IPT apporval function:
     // ipToken.connect(IP-HOLDER-ADDRESS).approve(IPTRADE-ADDRESS, REGISTRATION FEE);
-    function setIP(
-        string calldata str, 
-        bool onApproval
-        ) external nonReentrant {
-        require(checkSha512Length(str));
-        bytes32 sha512 = stringToBytes32(str);
-        require(!sha512s[sha512].exists, "is registered");
+    function setIP(string calldata str, bool onApproval) external nonReentrant {
+        require(checkMd5Length(str));
+        bytes32 md5 = stringToBytes32(str);
+        require(!md5s[md5].exists, "is registered");
 
         if (!onApproval) {
             // on credit in contract
@@ -440,11 +415,11 @@ contract IPtrade is ReentrancyGuard {
             spentIptOdometer += registerIPCostIpt;
         }
 
-        // store the sha512 (key) to the address (value)
-        sha512s[sha512].exists = true;
-        sha512s[sha512].owner = msg.sender;
-        sha512s[sha512].creationTimeStamp = block.timestamp;
-        sha512sTransactions[sha512].push(msg.sender);
+        // store the md5 (key) to the address (value)
+        md5s[md5].exists = true;
+        md5s[md5].owner = msg.sender;
+        md5s[md5].creationTimeStamp = block.timestamp;
+        md5sTransactions[md5].push(msg.sender);
 
         // provide free tokens
         if (freeTokensBool) {
@@ -452,12 +427,12 @@ contract IPtrade is ReentrancyGuard {
                 token.transfer(msg.sender, freeIpTokenwithdrawal);
                 iptInContract -= freeIpTokenwithdrawal;
                 iptBalances[owner] -= freeIpTokenwithdrawal;
-                emit TokensRequested(msg.sender, freeIpTokenwithdrawal,block.timestamp);
+                emit TokensRequested(msg.sender, freeIpTokenwithdrawal);
             }
         }
 
         // Emit IPRegistered event
-        emit IPRegistered(msg.sender, str,block.timestamp);
+        emit IPRegistered(msg.sender, str);
     }
 
 
@@ -465,20 +440,20 @@ contract IPtrade is ReentrancyGuard {
     // function to remobe an IP from the contract
     // can be done by the owner, if the IP is not for sale
     // the transaction can be read as a transfer to address(0)
-    // the transaction array remains intact and will be extended when the sha512sumn is registered again.
+    // the transaction array remains intact and will be extended when the md5sumn is registered again.
     function deleteIP(string calldata str) external {
-        require(checkSha512Length(str));
-        bytes32 sha512 = stringToBytes32(str);
+        require(checkMd5Length(str));
+        bytes32 md5 = stringToBytes32(str);
         // should be owner of the IP
-        require(sha512s[sha512].owner == msg.sender, "not owner");
+        require(md5s[md5].owner == msg.sender, "not owner");
         // IP cannot be for sale
-        require (!onsale[sha512].exists, "IP is for sale");
+        require (!onsale[md5].exists, "IP is for sale");
         // delete the IP
-        delete sha512s[sha512];
+        delete md5s[md5];
         // mark this as a transaction to address 0. 
-        sha512sTransactions[sha512].push(address(0));
+        md5sTransactions[md5].push(address(0));
         // event
-         emit IpDeleted(msg.sender, str, block.timestamp);
+         emit IpDeleted(msg.sender, str);
 
     }
 
@@ -507,11 +482,11 @@ contract IPtrade is ReentrancyGuard {
         bool onApproval
     ) external nonReentrant {
         require(buyerAddress != msg.sender, "don't sell to self");
-        // needs to be the sha512 owner
-        require(checkSha512Length(str));
-        bytes32 sha512 = stringToBytes32(str);
-        require(!onsale[sha512].exists, "already for sale"); 
-        require(sha512s[sha512].owner == msg.sender, "not owner");
+        // needs to be the md5 owner
+        require(checkMd5Length(str));
+        bytes32 md5 = stringToBytes32(str);
+        require(!onsale[md5].exists, "already for sale"); 
+        require(md5s[md5].owner == msg.sender, "not owner");
         
        
         // prepare coin check and transfer payment paid by current owner
@@ -535,7 +510,7 @@ contract IPtrade is ReentrancyGuard {
         spentIptOdometer += transferIPCostIpt;
 
         // set the onsale instance
-        onsale[sha512] = Onsale(
+        onsale[md5] = Onsale(
             true,
             msg.sender,
             buyerAddress,
@@ -544,7 +519,7 @@ contract IPtrade is ReentrancyGuard {
         );
 
         // Emit SalesIntentCreated event
-        emit SalesIntentCreated(msg.sender, str, block.timestamp);
+        emit SalesIntentCreated(msg.sender, str, salesPrice, buyerAddress);
     }
 
     // sellerCancelsSalesIntent
@@ -552,20 +527,20 @@ contract IPtrade is ReentrancyGuard {
     // It can only be successfully run when the time elapsed since creating the offer
     // has surpassed the lockTime
     function sellerCancelsSalesIntent(string calldata str) external {
-        require(checkSha512Length(str));
-        bytes32 sha512 = stringToBytes32(str);
-        // needs to be the sha512 owner
-        require(sha512s[sha512].owner == msg.sender, "not owner");
+        require(checkMd5Length(str));
+        bytes32 md5 = stringToBytes32(str);
+        // needs to be the md5 owner
+        require(md5s[md5].owner == msg.sender, "not owner");
         require(
-            block.timestamp > onsale[sha512].creationTimeStamp + lockTime,
+            block.timestamp > onsale[md5].creationTimeStamp + lockTime,
             "locked"
         );
-        require(onsale[sha512].exists, "Your ip is not for sale");
+        require(onsale[md5].exists, "Your ip is not for sale");
         // delete the sales intent
-        delete onsale[sha512];
+        delete onsale[md5];
 
         // Emit SalesIntentCancelled event
-        emit SalesIntentCancelled(msg.sender, str, block.timestamp);
+        emit SalesIntentCancelled(msg.sender, str);
     }
 
     // buyerBuysIP
@@ -581,17 +556,18 @@ contract IPtrade is ReentrancyGuard {
     // If onApproval is true, the IP holder should have approved the payment through the IPT apporval function:
     // ipToken.connect(IP-HOLDER-ADDRESS).approve(IPTRADE-ADDRESS, REGISTRATION FEE);
 
-    // The money is transferred to the seller through the contract
+    // The money is trabnferred to the seller through the contract
 
     function buyerBuysIP(
         string calldata str,
         uint256 salesPrice,
         bool onApproval
     ) external nonReentrant {
-        require(checkSha512Length(str));
-        bytes32 sha512 = stringToBytes32(str);
-        require(onsale[sha512].buyer_address == msg.sender, "not buyer, check sha512");
-        require(onsale[sha512].salesPrice == salesPrice, "incorrect price");
+        require(checkMd5Length(str));
+        bytes32 md5 = stringToBytes32(str);
+        require(onsale[md5].buyer_address == msg.sender, "not buyer, check md5");
+        require(onsale[md5].salesPrice == salesPrice, "incorrect price");
+
 
             if (!onApproval) {
                 // check acount balance
@@ -600,7 +576,7 @@ contract IPtrade is ReentrancyGuard {
                 // transfer the coins to the seller
                 iptBalances[msg.sender] -= salesPrice;
                 iptInContract -= salesPrice;
-                token.transfer(onsale[sha512].owner_address, salesPrice);
+                token.transfer(onsale[md5].owner_address, salesPrice);
             }
             if (onApproval) {
                 // check approval
@@ -612,17 +588,17 @@ contract IPtrade is ReentrancyGuard {
                 // get paid
                 token.transferFrom(
                     msg.sender,
-                    onsale[sha512].owner_address,
+                    onsale[md5].owner_address,
                     salesPrice
                 );
             }
  
 
         // transfer  virtually
-        sha512s[sha512].owner = msg.sender;
-        sha512sTransactions[sha512].push(msg.sender);
+        md5s[md5].owner = msg.sender;
+        md5sTransactions[md5].push(msg.sender);
         // set Onsale record to false
-        delete onsale[sha512];
+        delete onsale[md5];
 
         // provide free tokens
         if (freeTokensBool) {
@@ -630,17 +606,16 @@ contract IPtrade is ReentrancyGuard {
                 token.transfer(msg.sender, freeIpTokenwithdrawal);
                 iptInContract -= freeIpTokenwithdrawal;
                 iptBalances[owner] -= freeIpTokenwithdrawal;
-                emit TokensRequested(msg.sender, freeIpTokenwithdrawal,block.timestamp);
+                emit TokensRequested(msg.sender, freeIpTokenwithdrawal);
             }
         }
 
         // Emit events
         emit IPTransferred(
-            onsale[sha512].owner_address,
+            onsale[md5].owner_address,
             msg.sender,
             str,
-            salesPrice,
-            block.timestamp
+            salesPrice
         );
     }
 

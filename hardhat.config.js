@@ -1,6 +1,7 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("hardhat-gas-reporter");
 require("dotenv").config() ; 
+require("@nomiclabs/hardhat-web3");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -16,7 +17,9 @@ module.exports = {
   networks:{
     goerli:{
       url:process.env.INFURA_GOERLI_ENDPOINT,
-      accounts:[process.env.PRIVATE_KEY]
+      accounts:[process.env.PRIVATE_KEY],
+      gas: 2100000,
+      gasPrice: 8000000000,
     },
     hardhat: {
       chainId: 31337,
