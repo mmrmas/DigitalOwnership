@@ -28,7 +28,7 @@ contract IPToken is ERC20Capped, ERC20Burnable {
     /* 
     minting functions
     */
-    //__myMint 
+    // myMint 
     // limit minting to capped amount
     // FROM: @dev See {ERC20-_mint}.
     function myMint(address account, uint256 amount) private {
@@ -39,7 +39,7 @@ contract IPToken is ERC20Capped, ERC20Burnable {
         super._mint(account, amount);
     }
 
-    //__ _mintMinerReward 
+    // _mintMinerReward 
     // mint new coins as block rewards
     function _mintMinerReward() private {
         if (blockReward > 0) {
