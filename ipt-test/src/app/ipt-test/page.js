@@ -1,13 +1,14 @@
 "use client";
 
 import Head from "next/head";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Web3 from "web3";
 import contracts from "../../../blockchain/iptest.js"; //
 import "bulma/css/bulma.css";
 import styles from "../../../styles/ipt.module.css";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import Image from 'next/image';
 
 const IPTContract = contracts.IPTContract;
 const IPtrade = contracts.IPtrade;
@@ -146,65 +147,42 @@ const IpTrade = () => {
     }
   };
 
-  // Function to handle faucet interactions
-  const getFaucetHandler = async () => {
+  // Fetch faucet information
+  const getFaucetHandler = useCallback(async () => {
     try {
       const faucet = await window.ethereum.request({
         method: "eth_call",
-        params: [
-          {
-            from: accounts[0], // specify the sender
-            to: IPtrade.options.address,
-            data: IPtrade.methods.freeIpTokenwithdrawal().encodeABI(),
-          },
-          "latest",
-        ],
+        params: [{
+          from: accounts[0],
+          to: IPtrade.options.address,
+          data: IPtrade.methods.freeIpTokenwithdrawal().encodeABI(),
+        }, "latest"],
       });
       setFaucet(faucet);
-    } catch (err) {
-      console.log("Faucet error", err.data.message);
-      showError(err.data.message);
-      return;
-    }
 
-    try {
-      const registrationprice = await window.ethereum.request({
+      const registrationPrice = await window.ethereum.request({
         method: "eth_call",
-        params: [
-          {
-            from: accounts[0], // specify the sender
-            to: IPtrade.options.address,
-            data: IPtrade.methods.registerIPCostIpt().encodeABI(),
-          },
-          "latest",
-        ],
+        params: [{
+          from: accounts[0],
+          to: IPtrade.options.address,
+          data: IPtrade.methods.registerIPCostIpt().encodeABI(),
+        }, "latest"],
       });
-      setRegistrationPrice(registrationprice);
-    } catch (err) {
-      console.log("registration price error", err.data.message);
-      showError(err.data.message);
-      return;
-    }
+      setRegistrationPrice(registrationPrice);
 
-    try {
-      const transferprice = await window.ethereum.request({
+      const transferPrice = await window.ethereum.request({
         method: "eth_call",
-        params: [
-          {
-            from: accounts[0], // specify the sender
-            to: IPtrade.options.address,
-            data: IPtrade.methods.transferIPCostIpt().encodeABI(),
-          },
-          "latest",
-        ],
+        params: [{
+          from: accounts[0],
+          to: IPtrade.options.address,
+          data: IPtrade.methods.transferIPCostIpt().encodeABI(),
+        }, "latest"],
       });
-      setTransferPrice(transferprice);
+      setTransferPrice(transferPrice);
     } catch (err) {
-      console.log("Transfer price error", err.data.message);
-      showError(err.data.message);
-      return;
+      showError(err.toString());
     }
-  };
+  }, [accounts]);
 
   // Function to get free IPT
   const getIPTHandler = async () => {
@@ -539,10 +517,6 @@ const IpTrade = () => {
   }, [loading]);
 
   useEffect(() => {
-    getFaucetHandler();
-  }, []);
-
-  useEffect(() => {
     console.log(web3);
   }, [web3]);
 
@@ -602,10 +576,11 @@ const IpTrade = () => {
     return (
       <nav className={styles.whiteBackground}>
         <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
-          <img
+          <Image
             src="/img/ipt_coin.jpg"
             alt="top_image"
-            style={{ width: '100%', height: '100%' }}
+            fill
+            style={{ objectFit: 'cover' }}
           />
         </div>
       </nav>
@@ -988,25 +963,25 @@ const IpTrade = () => {
 
       {/* Approve Section */}
       <div id="approve">
-        {currentView === 'approve' && <Approval />}
-        {currentView === 'approve' && <Allowance />}
-        {currentView === 'approve' && <RevokeApproval />}
+        {currentView === 'approve' && Approval()}
+        {currentView === 'approve' && Allowance()}
+        {currentView === 'approve' && RevokeApproval()}
       </div>
 
       {/* Register IP Section */}
       <div id="register">
-        {currentView === 'register' && <RegisterIP />}
+        {currentView === 'register' && RegisterIP()}
       </div>
 
       {/* Check IP Section */}
       <div id="check">
-        {currentView === 'check' && <CheckIP />}
+        {currentView === 'check' && CheckIP()}
       </div>
 
       {/* Offer IP Section */}
       <div id="transfer">
-        {currentView === 'transfer' && <OfferIP />}
-        {currentView === 'transfer' && <BuyIP />}
+        {currentView === 'transfer' && OfferIP()}
+        {currentView === 'transfer' && BuyIP()}
       </div>
 
       {/* Footer */}
