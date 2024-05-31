@@ -40,7 +40,7 @@ const iptrade = () => {
   const [copied, setCopied] = useState(false);
   const [registrationEvent, setRegistrationEvent] = useState("");
   const [transferEvent, setTransferEvent] = useState("");
-
+ 
   // Function to connect wallet
   const connectWalletHandler = async () => {
     console.log("connect wallet");
