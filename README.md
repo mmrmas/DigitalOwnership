@@ -1,5 +1,5 @@
 # IPtrade: an on-chain digitized content ownership tracking platform
-### driven by IPT, the ownership token
+## driven by IPT, the ownership token
 
  The smart contract **IPtrade** (address) registers, tracks and manages ownership for digitized content.IPtrade logs content in the form of a simple cryptographic fingerprint to a wallet address on the blockchain. It runs on **IPT** (address), the ownership token. This document introduces IPT together with IPtrade. Developments will be published on [github](github.com/mmrmas/IPT)
 
