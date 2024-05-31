@@ -228,46 +228,26 @@ Updates and queries can be posted on the [github account] (www.github.com/mmrmas
 
 ### IPT
 
-#### Mappings
-```
-mapping(bytes32 => address[]) private md5sTransactions;
-mapping(bytes32 => IPowner) private md5s;
-```
-
-- md5sTransactions: Mapping from an MD5sum to an array of addresses representing transactions related to that hash.
-- md5s: Mapping from an MD5sum to an IPowner struct.
-
 #### State Variables
-```
-address payable public owner;
-uint256 public blockReward;
-uint256 public totalMined;
-```
-
-- owner: The address that deployed the contract and has ownership rights.
-- blockReward: The current block reward for miners.
-- totalMined: The total amount of tokens mined so far.
+- `uint256 public blockReward`: The block reward for miners.
+- `uint256 public totalMined`: The total amount of tokens mined so far.
 
 
 #### Functions
-- constructor: Initializes the contract, setting initial values for cap, mint at launch, and reward.
-- myMint: Internal function to limit minting to the capped amount.
-- \_mintMinerReward: Internal function to mint new coins as block rewards.
-- updateBlockReward: Internal function to update the block reward based on the total tokens mined.
-- \_update: Internal function to update state variables during a transfer.
-- getBlockReward: External view function to get the current block reward.
-- revokeApproval: External function to revoke approval for a certain address.
-- readApprovalFor: External view function to read the approval amount for a specific address.
-- Fallback Function: Refuses Ether and reverts the transaction.
-
-```
-receive() external payable {
-    revert("Sending ether to this contract is not allowed");
-}
-```
+- `constructor`: Initializes the contract, setting initial values for cap, mint at launch, and reward.
+- ` myMint(address account, uint256 amount)`: Private function to limit minting to the capped amount.
+- ` _mintMinerReward()`: Private function to mint new coins as block rewards.
+-  updateBlockReward() : Private function to update the block reward based on the total tokens mined.
+- `_update( address from,  address to,   uint256 value )`: Internal function to update state variables during a transfer (overriding ERC20* transfer functions).
+- `revokeApproval(address approvedAddress)`: External function to revoke approval for a certain address.
+- `readApprovalFor( address contractAddress )`: External view function to read the approval amount for a specific address.
+- Fallback Function: External function to refuses Ether and reverts the transaction.
 
 
 ### IPtrade
+
+
+
 
 #### Structs
 ```

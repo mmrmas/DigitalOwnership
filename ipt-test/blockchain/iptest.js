@@ -8,7 +8,7 @@ import Web3 from 'web3'
 const web3 = new Web3("ws://localhost:8545")
 
 
-const abi_token = [
+const abi_token =  [
   {
     "inputs": [
       {
@@ -509,67 +509,11 @@ const abi_token = [
         {
           "indexed": false,
           "internalType": "string",
-          "name": "md5",
+          "name": "sha512",
           "type": "string"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
         }
       ],
       "name": "IPRegistered",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "from",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        }
-      ],
-      "name": "IPTReceived",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "to",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        }
-      ],
-      "name": "IPTWithdrawal",
       "type": "event"
     },
     {
@@ -590,19 +534,13 @@ const abi_token = [
         {
           "indexed": false,
           "internalType": "string",
-          "name": "md5",
+          "name": "sha512",
           "type": "string"
         },
         {
           "indexed": false,
           "internalType": "uint256",
           "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
           "type": "uint256"
         }
       ],
@@ -621,14 +559,8 @@ const abi_token = [
         {
           "indexed": false,
           "internalType": "string",
-          "name": "md5",
+          "name": "sha512",
           "type": "string"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
         }
       ],
       "name": "IpDeleted",
@@ -639,49 +571,12 @@ const abi_token = [
       "inputs": [
         {
           "indexed": false,
-          "internalType": "address",
-          "name": "to",
-          "type": "address"
-        },
-        {
-          "indexed": false,
           "internalType": "uint256",
           "name": "amount",
           "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
         }
       ],
-      "name": "OwnerLostIPTWithdrawn",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "to",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        }
-      ],
-      "name": "OwnerSpentIPTWithdrawn",
+      "name": "OwnerIPTWithdrawn",
       "type": "event"
     },
     {
@@ -696,14 +591,8 @@ const abi_token = [
         {
           "indexed": false,
           "internalType": "string",
-          "name": "md5",
+          "name": "sha512",
           "type": "string"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
         }
       ],
       "name": "SalesIntentCancelled",
@@ -721,14 +610,8 @@ const abi_token = [
         {
           "indexed": false,
           "internalType": "string",
-          "name": "md5",
+          "name": "sha512",
           "type": "string"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
         }
       ],
       "name": "SalesIntentCreated",
@@ -748,12 +631,6 @@ const abi_token = [
           "internalType": "uint256",
           "name": "amount",
           "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
         }
       ],
       "name": "TokensRequested",
@@ -764,19 +641,6 @@ const abi_token = [
       "type": "fallback"
     },
     {
-      "inputs": [],
-      "name": "ONLY_OWNERHelper",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "string",
@@ -784,14 +648,9 @@ const abi_token = [
           "type": "string"
         },
         {
-          "internalType": "uint256",
+          "internalType": "uint192",
           "name": "salesPrice",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bool",
-          "name": "onApproval",
-          "type": "bool"
+          "type": "uint192"
         }
       ],
       "name": "buyerBuysIP",
@@ -813,19 +672,6 @@ const abi_token = [
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "depositIPT",
-      "outputs": [],
-      "stateMutability": "payable",
-      "type": "function"
-    },
-    {
       "inputs": [],
       "name": "freeIpTokenwithdrawal",
       "outputs": [
@@ -833,19 +679,6 @@ const abi_token = [
           "internalType": "uint256",
           "name": "",
           "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "freeTokensBool",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
         }
       ],
       "stateMutability": "view",
@@ -864,19 +697,19 @@ const abi_token = [
         {
           "components": [
             {
-              "internalType": "bool",
-              "name": "exists",
-              "type": "bool"
-            },
-            {
               "internalType": "address",
               "name": "owner",
               "type": "address"
             },
             {
-              "internalType": "uint256",
+              "internalType": "uint96",
               "name": "creationTimeStamp",
-              "type": "uint256"
+              "type": "uint96"
+            },
+            {
+              "internalType": "bool",
+              "name": "exists",
+              "type": "bool"
             }
           ],
           "internalType": "struct IPtrade.IPowner",
@@ -895,84 +728,34 @@ const abi_token = [
           "type": "string"
         }
       ],
-      "name": "getIpTransactions",
-      "outputs": [
-        {
-          "internalType": "address[]",
-          "name": "",
-          "type": "address[]"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "getIptBalance",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "str",
-          "type": "string"
-        }
-      ],
       "name": "getSalesIntent",
       "outputs": [
         {
           "components": [
-            {
-              "internalType": "bool",
-              "name": "exists",
-              "type": "bool"
-            },
-            {
-              "internalType": "address",
-              "name": "owner_address",
-              "type": "address"
-            },
             {
               "internalType": "address",
               "name": "buyer_address",
               "type": "address"
             },
             {
-              "internalType": "uint256",
+              "internalType": "uint192",
               "name": "salesPrice",
-              "type": "uint256"
+              "type": "uint192"
             },
             {
-              "internalType": "uint256",
+              "internalType": "uint64",
               "name": "creationTimeStamp",
-              "type": "uint256"
+              "type": "uint64"
+            },
+            {
+              "internalType": "bool",
+              "name": "exists",
+              "type": "bool"
             }
           ],
           "internalType": "struct IPtrade.Onsale",
           "name": "",
           "type": "tuple"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "iptInContract",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -1045,19 +828,14 @@ const abi_token = [
           "type": "string"
         },
         {
-          "internalType": "uint256",
+          "internalType": "uint192",
           "name": "salesPrice",
-          "type": "uint256"
+          "type": "uint192"
         },
         {
           "internalType": "address",
           "name": "buyerAddress",
           "type": "address"
-        },
-        {
-          "internalType": "bool",
-          "name": "onApproval",
-          "type": "bool"
         }
       ],
       "name": "sellerCreatesSalesIntent",
@@ -1069,7 +847,7 @@ const abi_token = [
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "amount",
+          "name": "_amount",
           "type": "uint256"
         }
       ],
@@ -1081,40 +859,9 @@ const abi_token = [
     {
       "inputs": [
         {
-          "internalType": "bool",
-          "name": "_freeTokensBool",
-          "type": "bool"
-        }
-      ],
-      "name": "setFreetokensBool",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "_ONLY_OWNERHelper",
-          "type": "address"
-        }
-      ],
-      "name": "setHelper",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "string",
           "name": "str",
           "type": "string"
-        },
-        {
-          "internalType": "bool",
-          "name": "onApproval",
-          "type": "bool"
         }
       ],
       "name": "setIP",
@@ -1126,12 +873,12 @@ const abi_token = [
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "register",
+          "name": "_register",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "transfer",
+          "name": "_transfer",
           "type": "uint256"
         }
       ],
@@ -1144,7 +891,7 @@ const abi_token = [
       "inputs": [
         {
           "internalType": "uint256",
-          "name": "amount",
+          "name": "_amount",
           "type": "uint256"
         }
       ],
@@ -1157,26 +904,13 @@ const abi_token = [
       "inputs": [
         {
           "internalType": "address payable",
-          "name": "new_owner",
+          "name": "_new_owner",
           "type": "address"
         }
       ],
       "name": "setNewOwner",
       "outputs": [],
       "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "spentIptOdometer",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -1208,26 +942,6 @@ const abi_token = [
     {
       "inputs": [],
       "name": "unregisteredIPT",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "userIptWithdrawal",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "withdrawSpentIpt",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

@@ -1,29 +1,41 @@
 .main strong {
-  color:#fff;
+  color: black;
 }
 
 .main {
-  color:#fff;
+  color: black;
+  background-color: white; /* Ensure the entire page background is white */
+  margin: 0; /* Remove default margin */
+  padding: 0; /* Remove default padding */
+  font-family: Arial, Helvetica, sans-serif; /* Ensure consistent font family */
+}
+
+.main h2 {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 2em;
+  font-weight: bold;
+  color:white ;
+  z-index: 10; /* Ensures it's above other content */
 }
 
 .main h1{
     font-family: Arial, Helvetica, sans-serif;
     font-size: 2em;
     font-weight: bold;
-    color: #fff;
+    color:black ;
 }
 
 .main h4{
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 1.2em;
+  font-size: 1.4em;
   font-weight: bold;
-  color: #fff;
+  color: white;
 }
 
   /* ipt.module.css */
 .whiteBackground {
-    background-color: #000;
-    color: 
+    background-color: white;
+    color: black;
   }
   
   .input {
@@ -48,6 +60,7 @@
     margin-left: 40px;
     margin-right:40px;
     margin-top:  10px;
+    padding: 10px;
   }
 
   .dropdowncontainer {
@@ -64,6 +77,48 @@
     max-height: 500px; /* Adjust the value based on your content height */
   }
 
-  .button {
+
+  .topbar {
     width: 100%;
-  }
+    background-color: #000; /* Adjust the background color as needed */
+    padding: 10px 40px; /* Top and bottom padding with horizontal padding */
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* This spreads out the navbar content horizontally */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Optional: adds shadow for a slight 3D effect */
+}
+
+.topbar a {
+    color: #fff;
+    text-decoration: none;
+    padding: 10px 15px; /* Padding inside each link for better clickability */
+    font-size: 16px; /* Set the font size for navbar links */
+}
+
+.topbar a:hover {
+    background-color: #333; /* Color change on hover */
+}
+
+.content {
+  margin-top: 60px; /* Adjust top margin to prevent overlap */
+  padding: 20px;
+}
+
+.footer {
+  width: 100%;
+  color: white; /* White text color */
+  text-align: center;
+  padding: 20px 0; /* Padding around the text */
+  background-color: black; /* Adjust as needed */
+  position: relative; /* Fixed position to stick to the bottom */
+  bottom: 0;
+  left: 0;
+  z-index: 10; /* Ensures it's above other content */
+}
+
+.app {
+  min-height: 100vh; /* Full view height */
+  position: relative; /* Context for absolute positioning */
+  padding-bottom: 60px; /* Adjust based on your footer height to avoid overlap */
+}
