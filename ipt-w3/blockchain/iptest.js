@@ -5,7 +5,7 @@ import Web3 from 'web3'
 //)
 //const web3 = new Web3(provider)
 
-const web3 = new Web3("ws://localhost:8545")
+const web3 = new Web3("wss://mainnet.infura.io/ws/v3/9f9a10c3208d4df5a13b0261a8724ed4")
 
 
 const abi_token =  [
@@ -951,8 +951,8 @@ const abi_token =  [
       "type": "receive"
     }
   ]
-const IPTContract = new web3.eth.Contract(abi_token,"0x5FbDB2315678afecb367f032d93F642f64180aa3")
-const IPtrade = new web3.eth.Contract(abi_trade,"0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512")
+const IPTContract = new web3.eth.Contract(abi_token,"0x33Df9e002Ae0cc01a89ab4F08d130d0549F09ffB")
+const IPtrade = new web3.eth.Contract(abi_trade,"0x9de04769ddC87b9196Ed5c9595A9b113F1193b5c")
 
 
 //export  IPTrade;

@@ -1,6 +1,6 @@
 "use client";
 
-import Head from "next/head";
+import Head from "next/head.js";
 import { useState, useEffect, useCallback } from "react";
 import Web3 from "web3";
 import contracts from "../../../blockchain/iptest.js"; //
@@ -8,7 +8,7 @@ import "bulma/css/bulma.css";
 import styles from "../../../styles/ipt.module.css";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import Image from 'next/image';
+import Image from 'next/image.js';
 
 const IPTContract = contracts.IPTContract;
 const IPtrade = contracts.IPtrade;
