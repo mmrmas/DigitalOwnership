@@ -14,7 +14,7 @@ const IPtrade = contracts.IPtrade;
 const IPtradeAddress = IPtrade.options.address;
 const buttonWidth = "15%";
 
-const iptrade = () => {
+const IpTrade = () => {
   const [currentView, setCurrentView] = useState('approve');
   const [error, setError] = useState("");
   const [faucet, setFaucet] = useState("");
@@ -1015,4 +1015,4 @@ const iptrade = () => {
   );
 };
 
-export default iptrade;
+export default IpTrade;
