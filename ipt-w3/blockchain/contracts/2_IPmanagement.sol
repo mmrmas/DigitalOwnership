@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
-// contracts/IPmanagement.sol
+// contracts/2_IPTrade.sol
 
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol"; //tested
+
 
 interface IERC20 {
     function transfer(address to, uint256 amount) external returns (bool);
@@ -22,9 +23,15 @@ interface IERC20 {
         address spender
     ) external view returns (uint);
 
-    function approve(address spender, uint256 amount) external returns (bool);
+    function approve(address spender, 
+        uint256 amount
+    ) external returns (bool);
 
-    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Transfer(address indexed from, 
+        address indexed to, 
+        uint256 value
+        );
+
     event Approval(
         address indexed owner,
         address indexed spender,
@@ -33,597 +40,470 @@ interface IERC20 {
 }
 
 contract IPtrade is ReentrancyGuard {
-    /* 
-    token variables
-    */
+
+       /////////////////////
+      // token variables  /
+     /////////////////////        
+
+    // owner: the owner wallet address of this contract     
     address payable public owner;
-    address public ONLY_OWNERHelper;
+    // token: the token instance
     IERC20 public token;
 
-    /* 
-    public variables
-    */
-    uint256 public freeIpTokenwithdrawal = 100 * (10 ** 18);
+
+
+       /////////////////////
+      // public variables /
+     /////////////////////  
+  
+    // freeIpTokenwithdrawal: the tokens distributed through the faucet
+    uint256 public freeIpTokenwithdrawal = 1000 * (10 ** 18);
+
+    // registerIPCostIpt: the cost to register IP
     uint256 public registerIPCostIpt = 100 * (10 ** 18);
-    uint256 public transferIPCostIpt = 200 * (10 ** 18);
+
+    // transferIPCostIpt: the cost to tranfer IP    
+    uint256 public transferIPCostIpt = 100 * (10 ** 18);
+
+    // lockTime: the time that locks and delays, such as faucet transfers, and IP offerings
     uint256 public lockTime = 604800 seconds;
-    bool public freeTokensBool = true;
-    uint256 public spentIptOdometer = 0; // keeps track on IPT expenses and reducts from user accounts
-    uint256 public iptInContract = 0;
 
-    /* 
-    events
-    */
-    event IPTWithdrawal(
-        address indexed to, 
-        uint256 indexed amount
-    );
-    event IPTReceived(
-        address from, 
-        uint256 amount
-    );
+
+
+       /////////////////////
+      //   events         /
+     /////////////////////  
+
+    // IPRegistered: emits owner and the SHA512 document fingerprint
     event IPRegistered(
-        address indexed owner, 
-        string indexed md5
+        address  owner, 
+        string  sha512
     );
+
+    // SalesIntentCreated: emits wallet address and SHA512 document fingerprint when an IP is offered
     event SalesIntentCreated(
-        address indexed seller,
-        string indexed md5,
-        uint256 salesPrice,
-        address indexed buyer
+        address  seller,
+        string  sha512
     );
+
+    // SalesIntentCancelled: emits wallet address and SHA512 document fingerprint when an IP is cancelled
     event SalesIntentCancelled(
-        address indexed seller, 
-        string indexed md5
+        address  seller, 
+        string  sha512
     );
+
+   // IPTransferred: emits old and new IP owner; and SHA512 document fingerprint; and IPT paid, when IP is tranferred 
     event IPTransferred(
-        address indexed from,
-        address indexed to,
-        string indexed md5,
+        address  from,
+        address  to,
+        string  sha512,
         uint256 amount
     );
+
+    // TokensRequested: emits wallet address and amount when Tokens are distributed through the faucet
     event TokensRequested(
-        address indexed requester, 
+        address  requester, 
         uint256 amount
     );
-    event OwnerSpentIPTWithdrawn(
-        address indexed to, 
+
+    // OwnerIPTWithdrawn: emits IPT amount tranferred from this contract to the owner
+    event OwnerIPTWithdrawn(
         uint256 amount
     );
-    event OwnerLostIPTWithdrawn(
-        address indexed to, 
-        uint256 amount
-    );
+
+    // IpDeleted: emits the original owner of IP and the SHA512 document fingerprint that is deleted from the chain
     event IpDeleted(
-        address indexed ipowner,
-        string indexed md5
+        address  ipowner,
+        string  sha512
     );
 
-    /*
-    structs
-    */
-    // This struct contains data about IP owners
+       /////////////////////
+      //   structs        /
+     /////////////////////  
+
+
+    // IPowner: This struct contains data about IP owners, i.e. wallet address, moment of creation, 
+    // and a boolean value to show if it exists
     struct IPowner {
-        bool exists;
         address owner;
-        uint256 creationTimeStamp;
-    }
-
-    // This struct contains data about IP on offer / for sale
-    struct Onsale {
+        uint96 creationTimeStamp;
         bool exists;
-        address owner_address;
-        address buyer_address;
-        uint256 salesPrice;
-        uint creationTimeStamp;
     }
 
-    /* 
-    mappings
-    */
-    mapping(address => uint256) private iptBalances;
-    mapping(bytes32 => IPowner) private md5s;
-    mapping(bytes32 => address[]) private md5sTransactions;
+    // Onsale: This struct contains data about IP on offer / for sale, i.e. the owner, buyer addresses, 
+    // salesprice, the moment of creationa an a boolean value to show if it exists
+    struct Onsale {
+        address buyer_address;
+        uint192 salesPrice;
+        uint64 creationTimeStamp;
+        bool exists;
+    }
+
+      /////////////////////
+      //   mappings       /
+     /////////////////////  
+
+
+    // sha512s: the main dataframe of this contract, holds hashes as keys and IP ownership info as values
+    mapping(bytes32 => IPowner) private sha512s;
+
+    // lastAccessTime: a mapping to keep track on the last access time to prevent wallets to drain the faucet
     mapping(address => uint256) private lastAccessTime;
+
+    // onsale: a data frame with hash as keys and onsale info as value, used for 
+    // keeping track on which IP is being registered for IP tranfer
     mapping(bytes32 => Onsale) private onsale;
 
-    /*
-    constructor
-    */
+      /////////////////////
+     //   constructor   /
+    /////////////////////  
+
+    // one-time function to establish the contract
     constructor(address tokenAddress) payable {
         token = IERC20(tokenAddress);
         owner = payable(msg.sender);
-        ONLY_OWNERHelper = payable(msg.sender);
     }
 
-    /*
-    translate variables functions TEST
-    */
-    // checkMd5Length
-    // Takes a string and reports if it is 32 bytes
-    function checkMd5Length(string memory str) internal pure returns (bool) {
+
+
+       /////////////////////
+      //  data  test      /
+     //  functions       /
+    /////////////////////  
+
+    // checkSha512Length:  takes a string and reports if it has the correct length of 128 chars
+        function checkSha512Length (
+        string memory str
+    ) private pure returns (bool) {
         bytes memory stringInBytes = bytes(str);
         uint256 strLength = stringInBytes.length;
-        require(strLength == 32, "md5 incorr");
+        require(strLength == 128, "sha512 incorr");
         return true;
     }
 
-    // stringToBytes32
-    // Takes a string and returns it in32 bytes
-    function stringToBytes32(
+    // stringToBytes32: Takes any string and returns it in 32 bytes hash
+    function stringToBytes32 (
         string memory str
-    ) internal pure returns (bytes32) {
+    ) private pure returns (bytes32) {
         return keccak256(abi.encodePacked(str));
     }
 
-    /* 
-    setter and getter variable functions, simple variables
-    */
 
-    // setOWner TEST
-    // A function that the owner can use to assign a secondary owner with control over functions
-    function setNewOwner(address payable new_owner) external ONLY_OWNER {
-        owner = new_owner;
+
+        /////////////////////
+       //  setter          /
+      //  functions       /
+     //  (non-IP)        /
+    /////////////////////  
+
+    // setNewOwner: A function that the owner can use to assign a new owner 
+    function setNewOwner(
+        address payable _new_owner
+        ) 
+    external ONLY_OWNER {
+        owner = _new_owner;
     }
 
-    // setHelper
-    // A function that the owner can use to assign a secondary owner with control over functions
-    function setHelper(address _ONLY_OWNERHelper) external ONLY_OWNER {
-        ONLY_OWNERHelper = _ONLY_OWNERHelper;
+    // setFreeIpTokenwithdrawal: set the amount of Tokens that are freely dispensed as part of some functions
+    function setFreeIpTokenwithdrawal(
+        uint256 _amount
+        ) 
+    external ONLY_OWNER {
+        freeIpTokenwithdrawal = _amount;
     }
 
-    // setFreeIpTokenwithdrawal
-    // set the amount of Tokens that are freely dispensed as part of some functions
-    function setFreeIpTokenwithdrawal(uint256 amount) external ONLY_OWNER {
-        freeIpTokenwithdrawal = amount;
+    // setLockTime: set the locktime in seconds, for the faucet waiting time, or offer expiration period
+    function setLockTime(
+        uint256 _amount
+        ) 
+    external ONLY_OWNER {
+        lockTime = _amount * 1 seconds;
     }
 
-    // setLockTime
-    // set the locktime in seconds, for the faucet waiting time, or offer expiration period
-    function setLockTime(uint256 amount) external ONLY_OWNER {
-        lockTime = amount * 1 seconds;
-    }
-
-    // setFreetokensBool
-    // A bool to open or close the faucet, accepts true or false
-    function setFreetokensBool(bool _freeTokensBool) external ONLY_OWNER {
-        freeTokensBool = _freeTokensBool;
-    }
-
-    // setIPCostIpt
-    // set the cost for IP registration in IPT, paid to the contract owner
+    // setIPCostIpt: set the cost for IP registration in IPT, paid to the contract owner
     function setIPCostIpt(
-        uint256 register,
-        uint256 transfer
+        uint256 _register,
+        uint256 _transfer
     ) external ONLY_OWNER {
         //name it sales price
-        registerIPCostIpt = register;
-        transferIPCostIpt = transfer;
+        registerIPCostIpt = _register;
+        transferIPCostIpt = _transfer;
     }
 
-    /*
-    getter functions for state variables set through usage TEST
-    */
 
-    // getIP
-    // Check who is the owner of an IP, need to provide the MD5sum
-    function getIP(string calldata str) external view returns (IPowner memory) {
-        require(checkMd5Length(str));
-        bytes32 md5 = stringToBytes32(str);
-        require(md5s[md5].exists, "IP does not exist");
-        return
-            IPowner(
-                md5s[md5].exists,
-                md5s[md5].owner,
-                md5s[md5].creationTimeStamp
-            );
-    }
 
-    // getSalesIntent
-    // Function check if an MD5sum is on sale, need to provide an MD5sum
-    function getSalesIntent(
-        string calldata str
-    ) external view returns (Onsale memory) {
-        bytes32 md5 = stringToBytes32(str);
-        require(onsale[md5].exists, "Not for sale");
-        return
-            Onsale(
-                onsale[md5].exists,
-                onsale[md5].owner_address,
-                onsale[md5].buyer_address,
-                onsale[md5].salesPrice,
-                onsale[md5].creationTimeStamp
-            );
-    }
+       /////////////////////
+      //   IPT transfer   /
+     //  functions       /
+    /////////////////////  
 
-    // getIpTransactions
-    // follow which addresses an MD5sum has belonged to, returns an array where the current owner is the last address
-    function getIpTransactions(
-        string calldata str
-    ) external view returns (address[] memory) {
-        bytes32 md5 = stringToBytes32(str);
-        return md5sTransactions[md5];
-    }
-
-    // getIptBalance
-    // users can use this function to check their IPT credit in the contract
-    function getIptBalance() external view returns (uint256) {
-        return (iptBalances[msg.sender]);
-    }
-
-    /* 
-    transfer functions
-    */
-    // requestTokens
-    // this is the contract's faucet
+    // requestTokens: this is the contract's faucet
     function requestTokens() external nonReentrant {
-        require(freeTokensBool, "faucet closed");
+        require(freeIpTokenwithdrawal > 0, "faucet closed");
         require(block.timestamp >= lastAccessTime[msg.sender] + lockTime, "try later");
         require(msg.sender != address(0), "request from 0");
-        require(iptBalances[owner] >= freeIpTokenwithdrawal, "no IPT av");
+        require(token.balanceOf(address(this)) >= freeIpTokenwithdrawal, "no IPT av");
 
         // set next access time
         lastAccessTime[msg.sender] = block.timestamp;
 
         // transfer
         token.transfer(msg.sender, freeIpTokenwithdrawal);
-        iptInContract -= freeIpTokenwithdrawal;
-        iptBalances[owner] -= freeIpTokenwithdrawal;
 
         // Emit TokensRequested event
         emit TokensRequested(msg.sender, freeIpTokenwithdrawal);
     }
 
-    // depositIPT
-    // This is an essential function for tranfers of IPT based on allowance
-    // IF users desire to pay from credit insted of allowance, they can tranfer
-    // IPT into the contract through this function
-    function depositIPT(uint256 amount) external payable nonReentrant {
+    // depositIPT: this is an private function for tranfers of IPT based on allowance
+     function depositIPT(
+        uint256 _amount,
+        address _payerAddress,
+        address _receiver
+    )  private  {
+
         // Checks
-        require(token.balanceOf(msg.sender) >= amount, "No funds");
-        require(
-            token.allowance(msg.sender, address(this)) >= amount,
-            "No allowance"
-        );
+        require(token.balanceOf(_payerAddress) >= _amount, "No funds");
+        require(token.allowance(_payerAddress, address(this)) >= _amount,  "No allowance"  );
 
         // Interaction
-        token.transferFrom(msg.sender, address(this), amount);
-
-        // Effects
-        iptBalances[msg.sender] += amount;
-        iptInContract += amount;
-
-        // Event Emission
-        emit IPTReceived(msg.sender, amount);
-    }
-
-    // contractReceivesCredit
-    // This is an internal function for tranfers of IPT based on allowance
-    function contractReceivesCredit(
-        uint256 amount,
-        address payerAddress
-    ) private {
-        // Checks
-        require(token.balanceOf(payerAddress) >= amount, "No funds");
-        require(
-            token.allowance(payerAddress, address(this)) >= amount,
-            "No allowance"
-        );
-
-        // Interaction
-        token.transferFrom(payerAddress, address(this), amount);
-
-        // Effects
-        iptBalances[payerAddress] += amount;
-        iptInContract += amount;
-
-        // Event Emission
-        emit IPTReceived(payerAddress, amount);
+        token.transferFrom(_payerAddress, _receiver, _amount);
     }
 
 
-    // depostit fallback functions
-    // the fallback option to prevent sending Ether directy to the contract
+    // recover IPT: move IPT out of the contract
+    function unregisteredIPT() external ONLY_OWNER nonReentrant {
+        uint256 totalIPTBalance = token.balanceOf(address(this));
+        token.transfer(owner, totalIPTBalance);
+
+        // Emit IPTWithdrawn event
+        emit OwnerIPTWithdrawn(totalIPTBalance);
+    }
+
+
+       /////////////////////
+      //   fallback       /
+     //  functions       /
+    /////////////////////  
+
+    // depostit fallback functions to prevent sending Ether directy to the contract
     receive() external payable {
         revert(
-            "Fallback function disabled. Use deposit() for Ether or depositIPT() for IPT."
+            "Fallback function disabled. Transfer on allowance only."
         );
     }
 
     fallback() external payable {
         revert(
-            "Fallback function disabled. Use deposit() for Ether or depositIPT() for IPT."
+            "Fallback function disabled. Transfer on allowance only."
         );
     }
 
-    // userIptWithdrawal
-    // A function for users to withdraw (part of) their IPT credit
-    function userIptWithdrawal(uint256 amount) external nonReentrant {
-        require(iptBalances[msg.sender] >= amount, "no IPT");
 
-        // pay and adjust credit
-        iptBalances[msg.sender] -= amount;
-        token.transfer(msg.sender, amount);
 
-        // adjust ipt contract
-        iptInContract -= amount;
+        /////////////////////
+       //  IP registration /
+      //  and transfer    /
+     //  functions       /
+    /////////////////////  
 
-        // Emit the Withdrawal event with the amount
-        emit IPTWithdrawal(msg.sender, amount);
-    }
 
-    // withdrawSpentIpt
-    // A function for the owner(helper) to withdraw all IPT that is earned from IP registrations to the owner address
-    // owner withdraws spent IPT and a potential surplus of IPT (when not transferred through depositIPT())
-    function withdrawSpentIpt() external ONLY_OWNER nonReentrant {
-        // set local transferNow varaible
-        require(spentIptOdometer > 0, "no IPT");
-        iptInContract -= spentIptOdometer;
-        token.transfer(owner, spentIptOdometer);
-        spentIptOdometer = 0;
-
-        // Emit IPTWithdrawn event
-        emit OwnerSpentIPTWithdrawn(owner, spentIptOdometer);
-    }
-
-    // recover UnregisteredIPT
-    // get the unregistered IPT back, ie recovering IPT that is not reegistered to any user
-    function unregisteredIPT() external ONLY_OWNER nonReentrant {
-        uint256 totalIPTBalance = token.balanceOf(address(this));
-        require(totalIPTBalance - iptInContract > 0, "No lost IPT");
-        uint256 transferNow = totalIPTBalance - iptInContract;
-        token.transfer(owner, transferNow);
-
-        // Emit IPTWithdrawn event
-        emit OwnerLostIPTWithdrawn(owner, transferNow);
-    }
-
-    /*
-    IP registration and transfer functions
-    */
-    // setIP
-    // The function to set the IP inside the contract/
-
+    // setIP:  The function to set the IP inside the contract
     // The IP holder should provide
-    // - the MD5sum,
-    // - a true/false if the registration is paid on IPT approval,
-    // - and a true/false if teh registration is paid in ETH
-    //
-    // If onApproval is true, the payment cannot be done in ETH
-    // If onApproval is true, the IP holder should have approved the payment through the IPT apporval function:
-    // ipToken.connect(IP-HOLDER-ADDRESS).approve(IPTRADE-ADDRESS, REGISTRATION FEE);
-    function setIP(string calldata str, bool onApproval) external nonReentrant {
-        require(checkMd5Length(str));
-        bytes32 md5 = stringToBytes32(str);
-        require(!md5s[md5].exists, "is registered");
+    // - the SHA512
+    // and approve the contract to transfer the fee on its behalf
+    function setIP(
+        string calldata str
+        ) external nonReentrant {
+        
+        require(checkSha512Length(str));
+        bytes32 sha512 = stringToBytes32(str);
+        require(!sha512s[sha512].exists, "is registered");
 
-        if (!onApproval) {
-            // on credit in contract
-            // check credits
-            require(iptBalances[msg.sender] >= registerIPCostIpt, "no IPT");
+        // get paid
+        depositIPT(registerIPCostIpt, msg.sender, owner); 
 
-            // register credit
-            iptBalances[msg.sender] -= registerIPCostIpt;
-            spentIptOdometer += registerIPCostIpt;
-        }
-        if (onApproval) {
-            // get paid
-            contractReceivesCredit(registerIPCostIpt, msg.sender); // this function checs allowance and balance
-
-            // register credit
-            iptBalances[msg.sender] -= registerIPCostIpt;
-            spentIptOdometer += registerIPCostIpt;
-        }
-
-        // store the md5 (key) to the address (value)
-        md5s[md5].exists = true;
-        md5s[md5].owner = msg.sender;
-        md5s[md5].creationTimeStamp = block.timestamp;
-        md5sTransactions[md5].push(msg.sender);
-
-        // provide free tokens
-        if (freeTokensBool) {
-            if (iptBalances[owner] >= freeIpTokenwithdrawal) {
-                token.transfer(msg.sender, freeIpTokenwithdrawal);
-                iptInContract -= freeIpTokenwithdrawal;
-                iptBalances[owner] -= freeIpTokenwithdrawal;
-                emit TokensRequested(msg.sender, freeIpTokenwithdrawal);
-            }
-        }
+        // store the sha512 (key) to the address (value)
+        sha512s[sha512].owner = msg.sender;
+        sha512s[sha512].creationTimeStamp = uint96(block.timestamp);
+        sha512s[sha512].exists = true;
 
         // Emit IPRegistered event
         emit IPRegistered(msg.sender, str);
     }
 
 
-    // deleteIP
-    // function to remobe an IP from the contract
-    // can be done by the owner, if the IP is not for sale
-    // the transaction can be read as a transfer to address(0)
-    // the transaction array remains intact and will be extended when the md5sumn is registered again.
+    // deleteIP: function to remobe an IP from the contract
+    // Can be executed by the owner if the IP is not for sale
     function deleteIP(string calldata str) external {
-        require(checkMd5Length(str));
-        bytes32 md5 = stringToBytes32(str);
+        require(checkSha512Length(str));
+        bytes32 sha512 = stringToBytes32(str);
+
         // should be owner of the IP
-        require(md5s[md5].owner == msg.sender, "not owner");
+        require(sha512s[sha512].owner == msg.sender, "not owner");
+        
         // IP cannot be for sale
-        require (!onsale[md5].exists, "IP is for sale");
+        require (!onsale[sha512].exists, "IP is for sale");
+        
         // delete the IP
-        delete md5s[md5];
-        // mark this as a transaction to address 0. 
-        md5sTransactions[md5].push(address(0));
-        // event
+        delete sha512s[sha512];
+
+        // emit
          emit IpDeleted(msg.sender, str);
 
     }
 
-    // sellerCreatesSalesIntent
-    // The seller has agreed with a buyer and now creates an onsale object to transfer the IP
-    // They use this function for this
-
+    // sellerCreatesSalesIntent: the seller creates an onsale object to transfer the IP
     // The IP holder should provide
-    // - the MD5sum,
-    // - the sales price in IPT or ETH (remember that both coins have 18 decimals, meaning "1 equals 1*10-18 ETH or IPT")
+    // - the sha512 hash,
+    // - the salesprice
     // - the address of the buyer
-    // - a true/false if the IP transfer is paid on IPT approval,
-    // - and a true/false if IP transfer is paid in ETH
-
-    // It is important to note that the currency for the sales price (which will go from buyer to seller)
-    // is the same as the currency for the transfer (which will go from seller to the contract owner)
-    //
-    // If onApproval is true, the payment cannot be done in ETH
-    // If onApproval is true, the IP holder should have approved the payment through the IPT apporval function:
-    // ipToken.connect(IP-HOLDER-ADDRESS).approve(IPTRADE-ADDRESS, REGISTRATION FEE);
+    // and approve the contract to transfer the fee on its behalf
 
     function sellerCreatesSalesIntent(
         string calldata str,
-        uint256 salesPrice,
-        address buyerAddress,
-        bool onApproval
+        uint192 salesPrice,
+        address buyerAddress
     ) external nonReentrant {
-        require(buyerAddress != msg.sender, "don't sell to self");
-        // needs to be the md5 owner
-        require(checkMd5Length(str));
-        bytes32 md5 = stringToBytes32(str);
-        require(!onsale[md5].exists, "already for sale"); 
-        require(md5s[md5].owner == msg.sender, "not owner");
-        
-       
-        // prepare coin check and transfer payment paid by current owner
-        if (!onApproval) {
-            // check acount balance
-            require(iptBalances[msg.sender] >= transferIPCostIpt, "no IPT");
-        }
-        if (onApproval) {
-            // check approval
-            require(
-                token.allowance(msg.sender, address(this)) >= transferIPCostIpt,
-                "No allowance"
-            );
-            // get paid
-            contractReceivesCredit(transferIPCostIpt, msg.sender);
-            // check acount balance
-            require(iptBalances[msg.sender] >= transferIPCostIpt, "no IPT");
-        }
-        // remove credit
-        iptBalances[msg.sender] -= transferIPCostIpt;
-        spentIptOdometer += transferIPCostIpt;
 
+        // you cannot sell to yourself
+        require(buyerAddress != msg.sender, "don't sell to self");
+
+        // needs to be the sha512 owner
+        require(checkSha512Length(str));
+
+        // check if exists and is owner
+        bytes32 sha512 = stringToBytes32(str);
+        require(!onsale[sha512].exists, "already for sale"); 
+        require(sha512s[sha512].owner == msg.sender, "not owner");
+        
+        // get paid
+        depositIPT(transferIPCostIpt, msg.sender, owner);
+        
         // set the onsale instance
-        onsale[md5] = Onsale(
-            true,
-            msg.sender,
+        onsale[sha512] = Onsale(
             buyerAddress,
             salesPrice,
-            block.timestamp
+            uint64(block.timestamp),
+            true
         );
 
-        // Emit SalesIntentCreated event
-        emit SalesIntentCreated(msg.sender, str, salesPrice, buyerAddress);
+        // Emit
+        emit SalesIntentCreated(msg.sender, str);
     }
 
-    // sellerCancelsSalesIntent
-    // A function to revoke the sales offer
+    // sellerCancelsSalesIntent: a function to revoke the sales offer
     // It can only be successfully run when the time elapsed since creating the offer
     // has surpassed the lockTime
     function sellerCancelsSalesIntent(string calldata str) external {
-        require(checkMd5Length(str));
-        bytes32 md5 = stringToBytes32(str);
-        // needs to be the md5 owner
-        require(md5s[md5].owner == msg.sender, "not owner");
-        require(
-            block.timestamp > onsale[md5].creationTimeStamp + lockTime,
-            "locked"
-        );
-        require(onsale[md5].exists, "Your ip is not for sale");
-        // delete the sales intent
-        delete onsale[md5];
+        require(checkSha512Length(str));
 
-        // Emit SalesIntentCancelled event
+        // needs to be the sha512 owner
+        bytes32 sha512 = stringToBytes32(str);
+        require(sha512s[sha512].owner == msg.sender, "not owner");
+        require( block.timestamp > onsale[sha512].creationTimeStamp + lockTime,   "locked"   );
+        require(onsale[sha512].exists, "Your ip is not for sale");
+
+        // delete the sales intent
+        delete onsale[sha512];
+
+        // Emit
         emit SalesIntentCancelled(msg.sender, str);
     }
 
-    // buyerBuysIP
-    // The function to tranfer the IP to the buyer
+    // buyerBuysIP: the function to tranfer the IP to the buyer
     // The buyer runs this function with the following input:
-    //
     // - the salesprice, which should be the agreed sales price (remember that both coins have 18 decimals, meaning "1 equals 1*10-18 ETH or IPT")
-    // - the MD5sum
-    // - a true/false if the IP transfer is paid on IPT approval,
-    // - and a true/false if IP transfer is paid in ETH
-
-    // If onApproval is true, the payment cannot be done in ETH
-    // If onApproval is true, the IP holder should have approved the payment through the IPT apporval function:
-    // ipToken.connect(IP-HOLDER-ADDRESS).approve(IPTRADE-ADDRESS, REGISTRATION FEE);
-
-    // The money is trabnferred to the seller through the contract
+    // - the sha512 hash
+    // The money is transferred to the seller through the contract
+    // Therefore, the sender must have approved the contract to transfer the negotiated price in IPT on its behalf
 
     function buyerBuysIP(
         string calldata str,
-        uint256 salesPrice,
-        bool onApproval
+        uint192 salesPrice
     ) external nonReentrant {
-        require(checkMd5Length(str));
-        bytes32 md5 = stringToBytes32(str);
-        require(onsale[md5].buyer_address == msg.sender, "not buyer, check md5");
-        require(onsale[md5].salesPrice == salesPrice, "incorrect price");
 
+        require(checkSha512Length(str));
+        bytes32 sha512 = stringToBytes32(str);
+        require(onsale[sha512].buyer_address == msg.sender, "not buyer, check sha512");
+        require(onsale[sha512].salesPrice == salesPrice, "incorrect price");
 
-            if (!onApproval) {
-                // check acount balance
-                require(iptBalances[msg.sender] >= salesPrice);
-                require(iptInContract >= salesPrice); // coins available in contract
-                // transfer the coins to the seller
-                iptBalances[msg.sender] -= salesPrice;
-                iptInContract -= salesPrice;
-                token.transfer(onsale[md5].owner_address, salesPrice);
-            }
-            if (onApproval) {
-                // check approval
-                require(
-                    token.allowance(msg.sender, address(this)) >= salesPrice,
-                    "no allowance"
-                );
-                require(token.balanceOf(msg.sender) >= salesPrice, "no funds");
-                // get paid
-                token.transferFrom(
-                    msg.sender,
-                    onsale[md5].owner_address,
-                    salesPrice
-                );
-            }
- 
+        // check approval and balance
+        require(token.allowance(msg.sender, address(this)) >= salesPrice,   "no allowance"  );
+        require(token.balanceOf(msg.sender) >= salesPrice,   "no funds"   );
 
+        // set temporary variable
+        address prevOwner = sha512s[sha512].owner;
+
+        // buyer pays seller 
+        token.transferFrom(
+            msg.sender,
+            sha512s[sha512].owner,
+            salesPrice
+        );
+    
         // transfer  virtually
-        md5s[md5].owner = msg.sender;
-        md5sTransactions[md5].push(msg.sender);
+        sha512s[sha512].owner = msg.sender;
+        
         // set Onsale record to false
-        delete onsale[md5];
-
-        // provide free tokens
-        if (freeTokensBool) {
-            if (iptBalances[owner] >= freeIpTokenwithdrawal) {
-                token.transfer(msg.sender, freeIpTokenwithdrawal);
-                iptInContract -= freeIpTokenwithdrawal;
-                iptBalances[owner] -= freeIpTokenwithdrawal;
-                emit TokensRequested(msg.sender, freeIpTokenwithdrawal);
-            }
-        }
+        delete onsale[sha512];
 
         // Emit events
         emit IPTransferred(
-            onsale[md5].owner_address,
+            prevOwner,
             msg.sender,
             str,
             salesPrice
         );
     }
 
-    //__ONLY_OWNER and helper tested
+
+
+       /////////////////////
+      //   getter         /
+     //  functions       /
+    /////////////////////  
+
+    // getIP: Check who is the owner of an IP, need to provide the MD5sum
+    function getIP(
+        string calldata str) 
+    external view returns (IPowner memory) {
+        require(checkSha512Length(str));
+        bytes32 sha512 = stringToBytes32(str);
+        require(sha512s[sha512].exists, "IP does not exist");
+        return
+            IPowner(
+                sha512s[sha512].owner,
+                sha512s[sha512].creationTimeStamp,
+                sha512s[sha512].exists
+            );
+    }
+
+    // getSalesIntent: Function check if an MD5sum is on sale, need to provide an MD5sum
+    function getSalesIntent(
+        string calldata str
+    ) external view returns (Onsale memory) {
+        bytes32 sha512 = stringToBytes32(str);
+        require(onsale[sha512].exists, "Not for sale");
+        return
+            Onsale( 
+                onsale[sha512].buyer_address,
+                onsale[sha512].salesPrice,
+                onsale[sha512].creationTimeStamp,
+                onsale[sha512].exists
+            );
+    }
+
+
+
+      /////////////////////
+     //  Modifiers       /
+    /////////////////////  
+
+    //__ONLY_OWNER 
     modifier ONLY_OWNER() {
         require(
-            msg.sender == owner || msg.sender == ONLY_OWNERHelper, 
-            "owner or helper only"
+            msg.sender == owner, 
+            "owner only"
         );
         _;
     }
