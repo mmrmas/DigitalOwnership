@@ -57,7 +57,7 @@ contract IPtrade is ReentrancyGuard {
      /////////////////////  
   
     // freeIpTokenwithdrawal: the tokens distributed through the faucet
-    uint256 public freeIpTokenwithdrawal = 500 * (10 ** 18);
+    uint256 public freeIpTokenwithdrawal = 1000 * (10 ** 18);
 
     // registerIPCostIpt: the cost to register IP
     uint256 public registerIPCostIpt = 100 * (10 ** 18);
