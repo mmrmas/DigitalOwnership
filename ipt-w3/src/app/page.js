@@ -242,39 +242,6 @@ const IpTrade = () => {
     }
   };
 
-  // Function to get registration cost
-  const getRegisterCostHandler = async () => {
-    const registerCostToGet = await window.ethereum.request({
-      method: "eth_call",
-      params: [
-        {
-          from: accounts[0], // specify the sender
-          to: IPtrade.options.address,
-          data: IPtrade.methods.registerIPCostIpt().encodeABI(),
-        },
-        "latest",
-      ],
-    });
-    const registerCostToSet = web3.utils.hexToNumber(registerCostToGet);
-    setRegisterCost(registerCostToSet);
-  };
-
-  // Function to get trade cost
-  const getTradeCostHandler = async () => {
-    const tradeCostToGet = await window.ethereum.request({
-      method: "eth_call",
-      params: [
-        {
-          from: accounts[0], // specify the sender
-          to: IPtrade.options.address,
-          data: IPtrade.methods.transferIPCostIpt().encodeABI(),
-        },
-        "latest",
-      ],
-    });
-    const tradeCostToSet = web3.utils.hexToNumber(tradeCostToGet);
-    setTradeCost(tradeCostToSet);
-  };
 
   // Function to set registration
   const setRegistrationHandler = async () => {
@@ -522,7 +489,7 @@ const IpTrade = () => {
 
   useEffect(() => {
     getFaucetHandler();
-  }, []);
+  }, [getFaucetHandler, accounts]);
 
   // Function to display error message using toast
   const showError = (message) => {
