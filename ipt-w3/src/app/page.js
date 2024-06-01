@@ -149,7 +149,7 @@ const IpTrade = () => {
 
   // Fetch faucet information
   const getFaucetHandler = useCallback(async () => {
-    try {
+  try {
       const faucet = await window.ethereum.request({
         method: "eth_call",
         params: [{
@@ -519,6 +519,10 @@ const IpTrade = () => {
   useEffect(() => {
     console.log(web3);
   }, [web3]);
+
+  useEffect(() => {
+    getFaucetHandler();
+  }, []);
 
   // Function to display error message using toast
   const showError = (message) => {
