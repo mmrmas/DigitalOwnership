@@ -18,7 +18,7 @@
     "react-input-mask": "^2.0.4",
     "react-router-hash-link": "^2.4.3",
     "react-toastify": "^10.0.5",
-    "sharp": "0.33.2",
+    "sharp": "^0.33.2",
     "solc": "^0.8.23-fixed",
     "web3": "^4.2.2"
   },
