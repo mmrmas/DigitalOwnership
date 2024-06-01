@@ -8,7 +8,7 @@ import "bulma/css/bulma.css";
 import styles from "../../styles/ipt.module.css";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import Image from 'next/image.js';
+import Image from 'next/image.js'; 
 
 const IPTContract = contracts.IPTContract;
 const IPtrade = contracts.IPtrade;
