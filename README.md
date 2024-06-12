@@ -1,7 +1,7 @@
-# IPtrade: an on-chain digitized content ownership tracking platform
+# IPtrade: an on-chain content ownership tracking platform
 ## driven by IPT, the ownership token
 
- The smart contract **IPtrade** (address) registers, tracks and manages ownership for digitized content.IPtrade logs content in the form of a simple cryptographic fingerprint to a wallet address on the blockchain. It runs on **IPT** (address), the ownership token. This document introduces IPT together with IPtrade. Developments will be published on [github](github.com/mmrmas/IPT)
+ The smart contract **IPtrade** (address) registers, tracks and manages ownership for digital and digitized content. IPtrade logs content in the form of a cryptographic fingerprint to a wallet address on the blockchain. It runs on **IPT** (address), the ownership token. This document introduces IPT together with IPtrade. Developments will be published on [github](github.com/mmrmas/IPT)
 
 ## TL;DR
 - IPtrade registers SHA-512 hashes under ERC20 compatible wallet addresses. 
@@ -11,14 +11,7 @@
 - The token that runs IPtrade is IPT (address), the ownership token.
 
 ## Introduction
-Digital content is often shared in a way that ownership is implicitly transferred from the creator to a client. The following scenario's exemplify this:
-
-- An architect designs a house and shares a link of the design to their client.
-- A freelance composer submits a music file to a studio. 
-- A patient receives health information by email. 
-- A bank promotes a financial product to a client by email.
-
-In such cases, ownership is transferred in a trust-based manner, where two very important elements are often overlooked:
+Digital content is often sharedin a trust-based manner, where two very important elements are often overlooked:
 
 1. is the received document identical to the document that was sent?
 2. does the person who sent the document identify as the original owner of the document?
@@ -33,8 +26,8 @@ Validation of a received document is the simplest use-case of IPtrade. This can 
 
 Validation can be achieved as follows:
 
--  Owners of IPT can register the SHA-512 hash of a document under a wallet address that belongs to them. 
-	-  When a SHA-512 hash is registered in the blockchain under the user's wallet address, it means that the owner has access to a document that can produce this hash.
+-  Holders of IPT can register the SHA-512 hash of a document under a wallet address that belongs to them. 
+	-  When a SHA-512 hash is registered in the blockchain under the user's wallet address, it proofs that the owner has access to a document that can produce this hash.
 	- It is recommended to embed the registration address inside the document, as an additional layer of proof that the first registration of the document took place on the logged address.
 - The workflow is as follows:
 	1. create a document (if possible, including the registration address inside the document)
@@ -42,13 +35,14 @@ Validation can be achieved as follows:
 	3. log this hash value under the owner address
 	4. send the document to the client
 	5. the client creates a SHA-512 hash from the document
-	6. the client verifies that the SHA-512 hash was registered and thereby validates the owner. 
+	6. the client verifies that the SHA-512 hash was registered on the address of the owner. 
 
 A second use-case is the creation of content, followed by a transfer. This way, a creator secures the arrival of their original content, and subsequently transfers the ownership to the receiver. This can be applied when creating original artistic works, where an artist can establish traceability and the client can certify the origin of the work; tracing and trading of digitized products such as art and jewelry; IP management of innovations and discoveries, such as software code and genomic sequences.
 
 Ownership transfer can be achieved, after logging the SHA-512, as follows:
 
-- Transfer is initiated by the original owner / creator, who makes an offer to a buyer's wallet address. The buyer can then complete the transaction by transferring an agreed amount of IPT, via IPtrade, to the wallet of the original owner, and has 7 days to do so.
+- Transfer is initiated by the original owner / creator, who makes an offer to a buyer's wallet address. 
+- The buyer can then complete the transaction by transferring an agreed amount of IPT, via IPtrade, to the wallet of the original owner, and has 7 days to do so.
 
 
 > **How to create an SHA-512 hash from a document.**
@@ -64,7 +58,12 @@ Ownership transfer can be achieved, after logging the SHA-512, as follows:
 > ***The result is a 128-character string that looks as follows: 71ab8abcd670ef62a1f47dd2a24b17e7025c5fd0a1365dda0dd7cb6d4c5fc7ee9f9ce2981ad64e1f6b77999bcc065912ebf4ee71d5776edc4c3fdba30341d323***
  
 
-## Best practices when the SHA-512 hash cannot be validated, or the registration address is incorrect
+## Best practices 
+- Log SHA-512 hashes of documents that are not intended to modify, such as pdf files, zip/tar archives, images.
+- Keep IPtrade-logged files in a dedicated archive, preferably write-protected.
+- Share with care. Log your valuable original creations and innovartions before you distribute content to others. Logging can be done in any stage of the creative process.
+
+## What to do when the SHA-512 hash cannot be validated, or the registration address is incorrect
 - The SHA-512 hash is a digital fingerprint of a document. Any change in the document will change the hash value. If the hash cannot be validated on IPtrade, then the received document is different from the logged one. Ask if the original owner sends you the original document. They should be able to provide it, otherwise someone else is claiming to be the sender; and that is exactly what the original sender wanted to protect you against.
 - IPtrade can only link one wallet address to a SHA-512 hash. If the hash of a received document matches an address that does not belong to the original owner, then the original owner should be able to show that they own that address as well. 
 - Wwners should be transparent regarding the address they use to register SHA-512 hashes.
