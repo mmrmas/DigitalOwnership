@@ -2,10 +2,13 @@
   "name": "ipt-w3",
   "version": "0.1.0",
   "private": true,
+  "homepage": "http://github.com/mmrmas/mmrmas.github.io.git",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "predeploy": "next build",
+    "deploy": "gh-pages -d build --repo https://github.com/mmrmas/mmrmas.github.io.git",
     "lint": "next lint",
     "compile": "solcjs --abi --include-path node_modules/ --base-path . blockchain/contracts/1_IPToken.sol blockchain/contracts/2_IPmanagement.sol --output-dir blockchain/build"
   },
@@ -17,15 +20,16 @@
     "react-dom": "^18",
     "react-input-mask": "^2.0.4",
     "react-router-hash-link": "^2.4.3",
+    "react-scripts": "^5.0.1",
     "react-toastify": "^10.0.5",
-    "sharp": "^0.33.1",
     "solc": "^0.8.23-fixed",
-    "web3": "^4.2.2"
+    "web3": "^4.9.0"
   },
   "devDependencies": {
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
     "eslint-config-next": "14.0.3",
+    "gh-pages": "^6.1.1",
     "postcss": "^8",
     "tailwindcss": "^3.3.0"
   }

@@ -171,14 +171,54 @@ contract IPtrade is ReentrancyGuard {
      //  functions       /
     /////////////////////  
 
-    // checkSha512Length:  takes a string and reports if it has the correct length of 128 chars
-        function checkSha512Length (
+    // checkSha512:  takes a string and reports if it has the correct length of 128 chars
+        function checkSha512 (
         string memory str
     ) private pure returns (bool) {
         bytes memory stringInBytes = bytes(str);
         uint256 strLength = stringInBytes.length;
         require(strLength == 128, "sha512 incorr");
-        return true;
+
+        bool valid = true;
+        
+        assembly {
+            let len := mload(stringInBytes)
+            let data := add(stringInBytes, 0x20)
+            for { let i := 0 } lt(i, len) { i := add(i, 1) } {
+                let char := byte(0, mload(add(data, i)))
+                switch char
+                case 0x30 { continue } // '0'
+                case 0x31 { continue } // '1'
+                case 0x32 { continue } // '2'
+                case 0x33 { continue } // '3'
+                case 0x34 { continue } // '4'
+                case 0x35 { continue } // '5'
+                case 0x36 { continue } // '6'
+                case 0x37 { continue } // '7'
+                case 0x38 { continue } // '8'
+                case 0x39 { continue } // '9'
+                case 0x61 { continue } // 'a'
+                case 0x62 { continue } // 'b'
+                case 0x63 { continue } // 'c'
+                case 0x64 { continue } // 'd'
+                case 0x65 { continue } // 'e'
+                case 0x66 { continue } // 'f'
+                case 0x41 { continue } // 'A'
+                case 0x42 { continue } // 'B'
+                case 0x43 { continue } // 'C'
+                case 0x44 { continue } // 'D'
+                case 0x45 { continue } // 'E'
+                case 0x46 { continue } // 'F'
+                default {
+                    valid := 0
+                    break
+                }
+            }
+        }
+
+        require(valid, "illegal hash");
+
+        return valid;
     }
 
     // stringToBytes32: Takes any string and returns it in 32 bytes hash
@@ -315,7 +355,7 @@ contract IPtrade is ReentrancyGuard {
         string calldata str
         ) external nonReentrant {
         
-        require(checkSha512Length(str));
+        require(checkSha512(str));
         bytes32 sha512 = stringToBytes32(str);
         require(!sha512s[sha512].exists, "is registered");
 
@@ -335,7 +375,7 @@ contract IPtrade is ReentrancyGuard {
     // deleteIP: function to remobe an IP from the contract
     // Can be executed by the owner if the IP is not for sale
     function deleteIP(string calldata str) external {
-        require(checkSha512Length(str));
+        require(checkSha512(str));
         bytes32 sha512 = stringToBytes32(str);
 
         // should be owner of the IP
@@ -369,7 +409,7 @@ contract IPtrade is ReentrancyGuard {
         require(buyerAddress != msg.sender, "don't sell to self");
 
         // needs to be the sha512 owner
-        require(checkSha512Length(str));
+        require(checkSha512(str));
 
         // check if exists and is owner
         bytes32 sha512 = stringToBytes32(str);
@@ -395,7 +435,7 @@ contract IPtrade is ReentrancyGuard {
     // It can only be successfully run when the time elapsed since creating the offer
     // has surpassed the lockTime
     function sellerCancelsSalesIntent(string calldata str) external {
-        require(checkSha512Length(str));
+        require(checkSha512(str));
 
         // needs to be the sha512 owner
         bytes32 sha512 = stringToBytes32(str);
@@ -422,7 +462,7 @@ contract IPtrade is ReentrancyGuard {
         uint192 salesPrice
     ) external nonReentrant {
 
-        require(checkSha512Length(str));
+        require(checkSha512(str));
         bytes32 sha512 = stringToBytes32(str);
         require(onsale[sha512].buyer_address == msg.sender, "not buyer, check sha512");
         require(onsale[sha512].salesPrice == salesPrice, "incorrect price");
@@ -467,7 +507,7 @@ contract IPtrade is ReentrancyGuard {
     function getIP(
         string calldata str) 
     external view returns (IPowner memory) {
-        require(checkSha512Length(str));
+        require(checkSha512(str));
         bytes32 sha512 = stringToBytes32(str);
         require(sha512s[sha512].exists, "IP does not exist");
         return

@@ -88,7 +88,7 @@ describe("IPtoken contract", function () {
 
 
     it("Should set the withdrawal amount to 10 ** 18", async function () {
-      expect(await iptrade.freeIpTokenwithdrawal()).to.equal(500000000000000000000n);
+      expect(await iptrade.freeIpTokenwithdrawal()).to.equal(1000000000000000000000n);
       await iptrade.connect(owner).setFreeIpTokenwithdrawal(10000000000000000000n);
       expect(await iptrade.freeIpTokenwithdrawal()).to.equal(10000000000000000000n);
 
@@ -136,7 +136,7 @@ describe("IPtoken contract", function () {
       const addr1Balance_before = await ipToken.balanceOf(addr1.address);
       await iptrade.connect(addr1).requestTokens();
       const addr1Balance_after = await ipToken.balanceOf(addr1.address);
-      expect(addr1Balance_after).to.equal(addr1Balance_before + 500000000000000000000n);
+      expect(addr1Balance_after).to.equal(addr1Balance_before + 1000000000000000000000n);
 
       // revert when requested again
       await ipToken.transfer(iptrade.target, 1000000000000000000000n);
@@ -156,7 +156,7 @@ describe("IPtoken contract", function () {
       const addr1Balance_before_2 = await ipToken.balanceOf(addr1.address);
       await iptrade.connect(addr1).requestTokens();
       const addr1Balance_after_2 = await ipToken.balanceOf(addr1.address);
-      expect(addr1Balance_after_2).to.equal(addr1Balance_before_2 + 500000000000000000000n);
+      expect(addr1Balance_after_2).to.equal(addr1Balance_before_2 + 1000000000000000000000n);
     })
 
     it("Should revert a token request without tokens at owner ", async function () {
@@ -228,6 +228,15 @@ describe("IPtoken contract", function () {
       await iptrade.connect(addr1).setIP('71ab8abcd670ef62a1f47dd2a24b17e7025c5fd0a1365dda0dd7cb6d4c5fc7ee9f9ce2981ad64e1f6b77999bcc065912ebf4ee71d5776edc4c3fdba30341d323');
 
     })
+
+    it("Should not set IP for illegal hash", async function () {
+
+      // set IP wit approval
+      await expect (iptrade.connect(addr1).setIP('71fb8abcd670ef62a1f47dd2a24b17e7025c5fd0a1365dda0dd7cb6d4c5fc7ee9f9ce2981ad64e1f6b77999bcc065912ebf4ee71d5776edc4c3fdba30341d32g'))
+      .to.be.revertedWith("illegal hash");
+
+    })
+
 
     it("setIP should revert when exists", async function () {
       // test registration duplicate
