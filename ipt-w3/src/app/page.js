@@ -2,26 +2,28 @@
 
 import Head from "next/head.js";
 import { useState, useEffect, useCallback } from "react";
-import Web3 from "web3";
+import { Web3 } from 'web3';
 import contracts from "../../blockchain/iptest.js"; //
 import "bulma/css/bulma.css";
 import styles from "../../styles/ipt.module.css";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import Image from 'next/image.js'; 
+import Image from 'next/image.js';
 
 const IPTContract = contracts.IPTContract;
 const IPtrade = contracts.IPtrade;
 const IPtradeAddress = IPtrade.options.address;
+const ethScanUrl = `https://sepolia.etherscan.io/address/${IPtradeAddress}`;
 const buttonWidth = "15%";
+
 
 const IpTrade = () => {
   const [currentView, setCurrentView] = useState('approve');
-  const [error, setError] = useState("");
+
   const [faucet, setFaucet] = useState("");
   const [registrationPrice, setRegistrationPrice] = useState("");
   const [transferPrice, setTransferPrice] = useState("");
-  const [approveAddress, setApproveAddress] = useState("");
+  const [approveAddress, setApproveAddress] = useState(IPtradeAddress);
   const [approveAmount, setApproveAmount] = useState("");
   const [readApproval, setReadApproval] = useState("");
   const [loading, setLoading] = useState(true);
@@ -36,13 +38,11 @@ const IpTrade = () => {
   const [offeredPrice, setOfferedPrice] = useState("");
   const [buyingsha512, setBuyingsha512] = useState("");
   const [buyingPrice, setBuyingPrice] = useState("");
-  const [registerCost, setRegisterCost] = useState("");
-  const [tradeCost, setTradeCost] = useState("");
-  const [copied, setCopied] = useState(false);
-  const [registrationEvent, setRegistrationEvent] = useState("");
   const [transferEvent, setTransferEvent] = useState("");
- 
-  // Function to connect wallet
+
+
+
+
   const connectWalletHandler = async () => {
     console.log("connect wallet");
     if (typeof window !== "undefined" && typeof window.ethereum !== "undefined") {
@@ -57,14 +57,20 @@ const IpTrade = () => {
         params: [],
       });
       setAccounts(accounts);
+
       let web3 = new Web3(window.ethereum);
       setWeb3(web3);
       setLoading(false);
+
       console.log("MetaMask is installed!");
     } else {
       console.log("Please install Metamask");
     }
   };
+
+
+
+
 
   // Common function to handle errors
   const handleError = (err, addressErrorMessage, uintErrorMessage) => {
@@ -118,9 +124,14 @@ const IpTrade = () => {
           "latest",
         ],
       });
-      const decimalValue = web3.utils.hexToNumber(readApproval);
-      console.log("Approval:", decimalValue);
-      setReadApproval(decimalValue);
+      if(readApproval === "0x"){
+        console.log("Approval:", readApproval);
+        setReadApproval(0);
+      }else{
+        const decimalValue = web3.utils.hexToNumber(readApproval);
+        console.log("Approval:", decimalValue);
+        setReadApproval(decimalValue);
+      }
     } catch (err) {
       handleError(err, "Please type a valid address", "");
     }
@@ -149,7 +160,7 @@ const IpTrade = () => {
 
   // Fetch faucet information
   const getFaucetHandler = useCallback(async () => {
-  try {
+    try {
       const faucet = await window.ethereum.request({
         method: "eth_call",
         params: [{
@@ -179,6 +190,7 @@ const IpTrade = () => {
         }, "latest"],
       });
       setTransferPrice(transferPrice);
+
     } catch (err) {
       showError(err.toString());
     }
@@ -200,6 +212,7 @@ const IpTrade = () => {
         ],
       });
       console.log("receipt:", txReceipt);
+      showSuccess("IPT collection successful!");
     } catch (err) {
       console.error("getting IPT failed:", err);
       showError(err.data.message);
@@ -209,33 +222,107 @@ const IpTrade = () => {
   // Function to listen for events
   const listenForEvents = async () => {
     try {
-      const registrationEvents = await IPtrade.getPastEvents('IPRegistered', {
-        fromBlock: 0,
-        toBlock: 'latest'
-      });
 
-      let registrationString = '';
-      registrationEvents.forEach(event => {
-        if (event.returnValues[1].toLowerCase() === checkedsha512.toLowerCase()) {
-          console.log("registered by", event.returnValues[0]);
-          registrationString = `${registrationString}\n${event.returnValues[0]}`;
+      setTransferEvent("No previous owners");
+
+      // Set the parameters for the getPastLogs method
+      const params = {
+        fromBlock: 0,
+        toBlock: 'latest',
+        address: "0x9de04769ddC87b9196Ed5c9595A9b113F1193b5c",
+        topics: ["0xca00f8032cdcf162c969609d82f6c8d2f473b3321c01f6323283abfa6abbdfbc"]
+      };
+
+      const IPTransferredEvents = await web3.eth.getPastLogs(params);
+      console.log("IPTransferredEvents", IPTransferredEvents);
+
+      let decodedLogs = [];
+      IPTransferredEvents.forEach(event => {
+
+        console.log("event", event);
+        try {
+          // Decode the log, ensuring proper handling of the BigInt
+          let decodedLog = web3.eth.abi.decodeLog([
+            {
+              type: 'address',
+              name: 'from',
+              indexed: false
+            },
+            {
+              type: 'address',
+              name: 'to',
+              indexed: false
+            },
+            {
+              type: 'string',
+              name: 'sha512',
+              indexed: false
+            },
+            {
+              type: 'uint256',
+              name: 'amount',
+              indexed: false
+            }
+          ], event.data); // event.topics.slice(1) removes the first topic (event signature)
+
+          // Add the transaction hash to the decoded log object
+          decodedLog.blockNumber = event.blockNumber;
+
+          // Ensure `amount` is handled as BigInt
+          console.log(decodedLog.amount);
+
+          decodedLogs.push(decodedLog);
+        } catch (error) {
+          console.error("Error decoding log:", error);
         }
       });
-      setRegistrationEvent(registrationString);
 
-      const transferEvents = await IPtrade.getPastEvents('IPTransferred', {
-        fromBlock: 0,
-        toBlock: 'latest'
+
+      // set previous owners
+      async function getTransferTimestamps(decodedLogs, checkedsha512) {
+        const transfers = await Promise.all(
+          decodedLogs.map(async item => {
+            if (item.sha512 === checkedsha512) { // Use the correct property name
+              const transferBlock = await web3.eth.getBlock(item.blockNumber);
+              const transferTs = new Date(parseInt(Number(transferBlock.timestamp) * 1000)).toString();
+              return [item.from, transferTs];
+            }
+            return ""; // Return an empty string if it doesn't match
+          })
+        );
+        
+        console.log(transfers, "transfers");
+        if (transfers.filter(date => date !== "").length > 0){
+        return (  
+          <table className="table is-striped is-hoverable is-fullwidth">
+            <thead>
+              <tr>
+                <th>Previous Owner</th>
+                <th>Transfered on</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transfers.filter(date => date !== "").map((date, index) => (
+                <tr key={index}>
+                  <td>{date[0]}</td>
+                  <td>{date[1]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        );
+              }
+      };
+
+
+      getTransferTimestamps(decodedLogs, checkedsha512).then(prevTransfers => {
+        console.log("Previous Transfers:", prevTransfers);
+        setTransferEvent(prevTransfers);
+      }).catch(error => {
+        console.error("Error:", error);
       });
 
-      let transferString = '';
-      transferEvents.forEach(event => {
-        if (event.returnValues[2].toLowerCase() === checkedsha512.toLowerCase()) {
-          console.log("transferred to", event.returnValues[1]);
-          transferString = `${transferString}\n${event.returnValues[1]}`;
-        }
-      });
-      setTransferEvent(transferString);
+
 
     } catch (error) {
       console.error('Error:', error);
@@ -245,12 +332,13 @@ const IpTrade = () => {
 
   // Function to set registration
   const setRegistrationHandler = async () => {
-    if (registeredsha512.length !== 128) {
-      showError("This is not a valid sha512. The length should be 128 characters.");
-      return;
-    }
+    
 
-    if (readApproval < registerCost) {
+    const correct512 = await check512correct(checkedsha512);
+    if(!correct512){return}
+ 
+
+    if (readApproval < registrationPrice) {
       showError("Approval not sufficient");
       return;
     }
@@ -268,6 +356,8 @@ const IpTrade = () => {
         ],
       });
       console.log("receipt:", txReceipt);
+      showSuccess("Registration successful!");
+
     } catch (err) {
       console.error("setting IPT failed:", err);
       showError(err.data.message);
@@ -276,10 +366,9 @@ const IpTrade = () => {
 
   // Function to get registered IP
   const getRegisteredIpHandler = async () => {
-    if (checkedsha512.length !== 128) {
-      showError("This is not a valid sha512. The length should be 128 characters.");
-      return;
-    }
+
+    const correct512 = await check512correct(checkedsha512);
+    if(!correct512){return}
 
     try {
       const getCheckedsha512 = await window.ethereum.request({
@@ -302,16 +391,20 @@ const IpTrade = () => {
       listenForEvents();
     } catch (err) {
       console.error("Error in getRegisteredIpHandler:", err);
-      showError(err.data.message);
+      showError(err.message);
+      getCheckedsha512Address("");
+      getCheckedsha512FirstRegistration("");
+      setTransferEvent("");
+      return;
     }
   };
 
   // Function to set offer
   const setOfferHandler = async () => {
-    if (offeredsha512.length !== 128) {
-      showError("This is not a valid sha512. The length should be 128 characters.");
-      return;
-    }
+
+
+    const correct512 = await check512correct(checkedsha512);
+    if(!correct512){return}
 
     if (isNaN(offeredPrice) || offeredPrice.length < 1) {
       showError("Please type a whole number as amount");
@@ -352,19 +445,19 @@ const IpTrade = () => {
           "latest",
         ],
       });
+      showSuccess("Successfully created transfer offer");
       console.log("receipt:", txReceipt);
     } catch (err) {
-      console.error("offering IPT failed:", err);
+      console.error("offering IP failed:", err);
       showError(err.data.message);
     }
   };
 
   // Function to set buying
   const setBuyingHandler = async () => {
-    if (buyingsha512.length !== 128) {
-      showError("This is not a valid sha512. The length should be 128 characters.");
-      return;
-    }
+
+    const correct512 = await check512correct(checkedsha512);
+    if(!correct512){return}
 
     if (isNaN(buyingPrice) || buyingPrice.length < 1) {
       showError("Please type a whole number as amount");
@@ -385,13 +478,13 @@ const IpTrade = () => {
       });
 
       const decoded = await web3.eth.abi.decodeParameters(["address", "uint192", "uint64", "bool"], getSalesintent);
-
       if (decoded[0].toLowerCase() !== accounts[0].toLowerCase()) {
         showError("You are not the buyer");
         return;
       }
       if (Number(decoded[1]) !== Number(buyingPrice)) {
-        showError("Not the right buying price");
+        console.log("buying price", decoded[1]);
+        showError("Not the right buying price, should be:", decoded[1]);
         return;
       }
       if (!decoded[3]) {
@@ -417,7 +510,10 @@ const IpTrade = () => {
         ],
       });
       const decimalValue = web3.utils.hexToNumber(readApproval);
-      if (decimalValue < buyingPrice) {
+      if(readApproval === "0x"){
+        showError(`Approval 0 is smaller than the agreed price ${buyingPrice}`);
+      }
+      else if (decimalValue < buyingPrice) {
         showError(`Approval ${decimalValue} is smaller than the agreed price ${buyingPrice}`);
         return;
       }
@@ -461,6 +557,7 @@ const IpTrade = () => {
           "latest",
         ],
       });
+      showSuccess("IP successfully transfered!");
       console.log("receipt:", txReceipt);
     } catch (err) {
       console.error("buying IPT failed:", err);
@@ -478,6 +575,11 @@ const IpTrade = () => {
         console.error('Error copying text to clipboard:', error);
       });
   };
+
+
+  useEffect(() => {
+    connectWalletHandler();
+  }, []);
 
   useEffect(() => {
     console.log("Loading:", loading);
@@ -504,6 +606,19 @@ const IpTrade = () => {
     });
   };
 
+  // Function to display success message using toast
+  const showSuccess = (message) => {
+    toast.success(message, {
+      position: "top-center",
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+    });
+  };
+
   // Function to scroll to a specific section
   const scrollToSection = (sectionId) => {
     const section = document.getElementById(sectionId);
@@ -518,6 +633,39 @@ const IpTrade = () => {
     scrollToSection(view);
   };
 
+  // Function to check the sha512 string
+  const check512correct = async(string) =>{
+
+    try{
+      let error = 0;
+      if (string.length !== 128) {
+        showError("This is not a valid sha512. The length should be 128 characters.");
+        error = 1;
+      }
+        
+      // Test the string against the pattern
+      // Define a regular expression pattern for valid hex characters
+      const hexPattern = /^[0-9a-fA-F]+$/;
+
+      if (!hexPattern.test(string)){
+        showError("This is not a valid sha512. It contains illegal characters.")
+        error = 1;
+      }
+
+      if (error === 1){
+        getCheckedsha512Address("");
+        getCheckedsha512FirstRegistration("");
+        setTransferEvent("");
+        return false;
+      }
+
+      return true;
+    } catch(err){
+      console.log(err);
+    }
+  }
+
+
   // Component to connect wallet
   const ConnectWallet = () => {
     return (
@@ -525,7 +673,7 @@ const IpTrade = () => {
         <div className={styles.container} style={{ display: 'flex', alignItems: 'center' }}>
           <div className="navbar-brand" style={{ color: 'white' }}>
             <div className="content">
-              <h2>IP trade</h2>
+              <h2>IP trade (BETA-test version)</h2>
               <h4>Register your creative content on chain</h4>
             </div>
           </div>
@@ -548,7 +696,7 @@ const IpTrade = () => {
       <nav className={styles.whiteBackground}>
         <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
           <Image
-            src="/img/ipt_coin.jpg"
+            src="./images/ipt_coin.jpg"
             alt="top_image"
             fill
             style={{ objectFit: 'cover' }}
@@ -574,15 +722,27 @@ const IpTrade = () => {
             <h1>Your connection to IP trade</h1>
           </div>
           <div className={styles.navbarEnd}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ marginRight: '10px', width: buttonWidth }}>
+                <button
+                  onClick={() => window.open(ethScanUrl, '_blank')}
+                  className={`button is-outlined is-small`}
+                >
+                  View this contract on Etherscan
+                </button>
+              </div>
+            </div>
             <div className={styles.container}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <p style={{ marginRight: '10px' }}>Your address: <strong>{`${loading ? " please connect wallet" : accounts[0]}`}</strong></p>
-                <button
-                  onClick={() => copyToClipboard(loading ? "Address not loaded" : accounts[0])}
-                  className={`button is-outlined is-small`}
-                >
-                  {copied ? 'Copied!' : 'Copy Address'}
-                </button>
+               
+                  <button
+                    onClick={() => copyToClipboard(loading ? "Address not loaded" : accounts[0])}
+                    className={`button is-outlined is-small`}
+                  >
+                    Copy Address
+                  </button>
+      
               </div>
               <p>Faucet height: {String(faucet) / 1000000000000000000} IPT</p>
               <p>Registration price: {String(registrationPrice) / 1000000000000000000} IPT</p>
@@ -628,7 +788,7 @@ const IpTrade = () => {
                   onClick={() => copyToClipboard(IPtradeAddress)}
                   className={`button is-outlined is-small`}
                 >
-                  {copied ? 'Copied!' : 'Copy Address'}
+                  Copy Address
                 </button>
               </div>
               <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -771,11 +931,10 @@ const IpTrade = () => {
             </button>
           </div>
         </div>
-        <div className={styles.container}>
-          <p>Current owner: {error === "This is not a valid sha512" && checkedsha512.length > 0 ? error : checkedsha512Address}</p>
-          <p>First registered at: {error === "This is not a valid sha512" && checkedsha512.length > 0 ? error : checkedsha512FirstRegistration}</p>
-          <p>First registered by: {error === "This is not a valid sha512" && checkedsha512.length > 0 ? error : registrationEvent}</p>
-          <p>Transferred to: {error === "This is not a valid sha512" && checkedsha512.length > 0 ? error : transferEvent}</p>
+        <div className={styles.container}> 
+          <p><strong>Current owner</strong>: {checkedsha512Address}</p>
+          <p><strong>First registered at</strong>: {checkedsha512FirstRegistration}</p>{"\n"}
+          {transferEvent}
         </div>
       </nav>
     );
@@ -813,7 +972,7 @@ const IpTrade = () => {
           </div>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <div style={{ width: '50%' }}>
-              <label htmlFor="offerIpPrice">Price</label>
+              <label htmlFor="offerIpPrice">Price in IPT</label>
               <input
                 className="input"
                 type="text"
@@ -858,7 +1017,7 @@ const IpTrade = () => {
           </div>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <div style={{ width: '50%' }}>
-              <label htmlFor="buyIpPrice">Price</label>
+              <label htmlFor="buyIpPrice">Price in IPT</label>
               <input
                 className="input"
                 type="text"
@@ -872,7 +1031,7 @@ const IpTrade = () => {
                 onClick={setBuyingHandler}
                 className={`button is-outlined is-fullwidth ${loading ? "is-loading" : ""}`}
               >
-                buy IP
+                Accept IP
               </button>
             </div>
           </div>
@@ -887,8 +1046,7 @@ const IpTrade = () => {
       <nav className={styles.whiteBackground}>
         <div className={styles.footer}>
           <p>© 2024 SquaredAnt GmbH. All rights reserved.</p>
-          <p>Contact us on ...</p>
-          <p>Follow this project on <a href="https://github.com">Github</a></p>
+          <p>Follow this project on <a href="https://github.com/mmrmas/ipt">Github</a></p>
         </div>
       </nav>
     );
