@@ -11,15 +11,17 @@ import 'react-toastify/dist/ReactToastify.css';
 import Image from 'next/image.js';
 
 const IPTContract = contracts.IPTContract;
+const IPTAddress = contracts.IPTContract._address;
+console.log("add", IPTContract);
 const IPtrade = contracts.IPtrade;
 const IPtradeAddress = IPtrade.options.address;
-const ethScanUrl = `https://sepolia.etherscan.io/address/${IPtradeAddress}`;
+const ethScanUrl = `https://etherscan.io/address/${IPtradeAddress}`;
 const buttonWidth = "15%";
+const decimals = 1000000000000000000;
 
 
 const IpTrade = () => {
   const [currentView, setCurrentView] = useState('approve');
-
   const [faucet, setFaucet] = useState("");
   const [registrationPrice, setRegistrationPrice] = useState("");
   const [transferPrice, setTransferPrice] = useState("");
@@ -29,8 +31,8 @@ const IpTrade = () => {
   const [loading, setLoading] = useState(true);
   const [web3, setWeb3] = useState(null);
   const [accounts, setAccounts] = useState([]);
-  const [registeredsha512, setregisteredsha512] = useState("");
-  const [checkedsha512, getCheckedsha512] = useState("");
+  const [registeredsha512, setRegisteredsha512] = useState("");
+  const [checkedsha512, setCheckedsha512] = useState("");
   const [checkedsha512Address, getCheckedsha512Address] = useState("");
   const [checkedsha512FirstRegistration, getCheckedsha512FirstRegistration] = useState("");
   const [offeredsha512, setOfferedsha512] = useState("");
@@ -39,6 +41,11 @@ const IpTrade = () => {
   const [buyingsha512, setBuyingsha512] = useState("");
   const [buyingPrice, setBuyingPrice] = useState("");
   const [transferEvent, setTransferEvent] = useState("");
+  const [thisLockTime, setThisLockTime] = useState("");
+  const [IPOnAddress, setIPOnAddress] = useState("");
+  const [transferAddresEvents, setTransferAddresEvents] = useState("");
+  const [registrationAddresEvents, setRegistrationAddresEvents] = useState("");
+
 
 
 
@@ -74,9 +81,19 @@ const IpTrade = () => {
 
   // Common function to handle errors
   const handleError = (err, addressErrorMessage, uintErrorMessage) => {
+    if (err && err.message) {
+      err = err.message;
+    }
     const errorMessage = err.toString();
     const match_address = errorMessage.match(/value "([^"]+)" at "\/0" must pass "address" validation/);
     const match_uint = errorMessage.match(/value "([^"]+)" at "\/1" must pass "uint256" validation/);
+    const match_denied = errorMessage.match(/denied/);
+    console.log(errorMessage);
+    if (match_denied) {
+      console.log("Match found:", match_denied[0]);
+  } else {
+      console.log("No match found");
+  }
 
     if (match_address && match_address[0]) {
       console.error('Caught specific error:', match_address[0]);
@@ -84,6 +101,9 @@ const IpTrade = () => {
     } else if (match_uint && match_uint[0]) {
       console.error('Caught specific error:', match_uint[0]);
       showError(uintErrorMessage);
+    } else if (match_denied && match_denied[0]) {
+      console.error('Caught specific error:', match_denied[0]);
+      showError("User denied transaction");
     } else {
       console.error('Caught an error:', errorMessage);
       showError(errorMessage);
@@ -99,7 +119,7 @@ const IpTrade = () => {
           {
             from: accounts[0], // specify the sender
             to: IPTContract.options.address,
-            data: IPTContract.methods.approve(approveAddress, approveAmount).encodeABI(),
+            data: IPTContract.methods.approve(approveAddress, approveAmount * decimals).encodeABI(),
           },
         ],
       });
@@ -124,10 +144,10 @@ const IpTrade = () => {
           "latest",
         ],
       });
-      if(readApproval === "0x"){
+      if (readApproval === "0x") {
         console.log("Approval:", readApproval);
         setReadApproval(0);
-      }else{
+      } else {
         const decimalValue = web3.utils.hexToNumber(readApproval);
         console.log("Approval:", decimalValue);
         setReadApproval(decimalValue);
@@ -191,6 +211,17 @@ const IpTrade = () => {
       });
       setTransferPrice(transferPrice);
 
+      const thisLockTime = await window.ethereum.request({
+        method: "eth_call",
+        params: [{
+          from: accounts[0],
+          to: IPtrade.options.address,
+          data: IPtrade.methods.lockTime().encodeABI(),
+        }, "latest"],
+      });
+      setThisLockTime(thisLockTime);
+
+
     } catch (err) {
       showError(err.toString());
     }
@@ -199,6 +230,17 @@ const IpTrade = () => {
   // Function to get free IPT
   const getIPTHandler = async () => {
     console.log("get free IPT");
+
+    // test if you have the right to get it 
+
+    const timePassedCheck = await listenForFaucetEvents();
+    console.log("timePassedCheck", timePassedCheck);
+    if (!timePassedCheck) {
+      showError("Not enough time since last transfer");
+      return;
+    }
+
+
     try {
       const txReceipt = await window.ethereum.request({
         method: "eth_sendTransaction",
@@ -219,8 +261,8 @@ const IpTrade = () => {
     }
   };
 
-  // Function to listen for events
-  const listenForEvents = async () => {
+  // Function to listen for Transferred events
+  const listenForTransferredEvents = async () => {
     try {
 
       setTransferEvent("No previous owners");
@@ -268,6 +310,9 @@ const IpTrade = () => {
           // Add the transaction hash to the decoded log object
           decodedLog.blockNumber = event.blockNumber;
 
+          // Add the transacionHash
+          decodedLog.transactionHash = event.transactionHash;
+
           // Ensure `amount` is handled as BigInt
           console.log(decodedLog.amount);
 
@@ -277,7 +322,6 @@ const IpTrade = () => {
         }
       });
 
-
       // set previous owners
       async function getTransferTimestamps(decodedLogs, checkedsha512) {
         const transfers = await Promise.all(
@@ -285,33 +329,35 @@ const IpTrade = () => {
             if (item.sha512 === checkedsha512) { // Use the correct property name
               const transferBlock = await web3.eth.getBlock(item.blockNumber);
               const transferTs = new Date(parseInt(Number(transferBlock.timestamp) * 1000)).toString();
-              return [item.from, transferTs];
+              return [item.from, transferTs, item.transactionHash];
             }
             return ""; // Return an empty string if it doesn't match
           })
         );
-        
-        console.log(transfers, "transfers");
-        if (transfers.filter(date => date !== "").length > 0){
-        return (  
-          <table className="table is-striped is-hoverable is-fullwidth">
-            <thead>
-              <tr>
-                <th>Previous Owner</th>
-                <th>Transfered on</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transfers.filter(date => date !== "").map((date, index) => (
-                <tr key={index}>
-                  <td>{date[0]}</td>
-                  <td>{date[1]}</td>
+
+        console.log("transfers", transfers);
+        if (transfers.filter(date => date !== "").length > 0) {
+          return (
+            <table className="table is-striped is-hoverable is-fullwidth">
+              <thead>
+                <tr>
+                  <th>Previous Owner</th>
+                  <th>Transfered on</th>
+                  <th>transactionHash</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        );
-              }
+              </thead>
+              <tbody>
+                {transfers.filter(date => date !== "").map((date, index) => (
+                  <tr key={index}>
+                    <td>{date[0]}</td>
+                    <td>{date[1]}</td>
+                    <td>{date[2]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          );
+        }
       };
 
 
@@ -330,16 +376,421 @@ const IpTrade = () => {
   };
 
 
+
+
+
+  // Function to listen for Faucet events
+  const listenForFaucetEvents = () => {
+    return new Promise(async (resolve, reject) => {
+      try {
+
+        // Set the parameters for the getPastLogs method
+        const params = {
+          fromBlock: 0,
+          toBlock: 'latest',
+          address: "0x9de04769ddC87b9196Ed5c9595A9b113F1193b5c",
+          topics: ["0xc3fb6c98272d7a0d5dc26727b61c00ece2e5bf3dbdc0284659e28d441c1ce06c"]
+        };
+
+        const IPTransferredEvents = await web3.eth.getPastLogs(params);
+        console.log("IPTransferredEvents", IPTransferredEvents);
+
+        let decodedLogs = [];
+        IPTransferredEvents.forEach(event => {
+
+          console.log("FaucetEvents", event);
+          try {
+            // Decode the log, ensuring proper handling of the BigInt
+            let decodedLog = web3.eth.abi.decodeLog([
+              {
+                type: 'address',
+                name: 'requester',
+                indexed: false
+              },
+              {
+                type: 'uint256',
+                name: 'amount',
+                indexed: false
+              }
+            ], event.data); // event.topics.slice(1) removes the first topic (event signature)
+
+            // Add the transaction hash to the decoded log object
+            decodedLog.blockNumber = event.blockNumber;
+
+            // Ensure `amount` is handled as BigInt
+            console.log(decodedLog.amount);
+
+            decodedLogs.push(decodedLog);
+          } catch (error) {
+            console.error("Error decoding Faucet log:", error);
+          }
+        });
+
+        // set previous transfers
+        async function getFaucetTimestamps(decodedLogs) {
+          const transfers = await Promise.all(
+            decodedLogs.map(async item => {
+              if (item.requester.toLowerCase() === accounts[0].toLowerCase()) { // Use the correct property name
+                const transferBlock = await web3.eth.getBlock(item.blockNumber);
+                const transferTs = new Date(parseInt(Number(transferBlock.timestamp) * 1000)).toString();
+                return [transferTs];
+              }
+              return ""; // Return an empty string if it doesn't match
+            })
+          );
+
+          console.log("transfers", transfers);
+
+          // Filter out empty strings and convert to Date objects
+          const validTransfers = transfers.filter(date => date !== "").map(date => new Date(date));
+
+          console.log("validTransfers", validTransfers);
+
+          // Find the latest date
+          const latestDate = new Date(Math.max.apply(null, validTransfers));
+
+          console.log("latest faucet transfer", latestDate);
+
+          // Get the current time
+          const currentTime = new Date();
+
+          // Calculate the difference in milliseconds
+          const differenceInMs = currentTime - latestDate;
+
+          // Convert the difference to a readable format
+          const differenceInSeconds = Math.floor(differenceInMs / 1000);
+
+          console.log("differenceInSeconds", differenceInSeconds);
+
+          if (differenceInSeconds < thisLockTime && !isNaN(differenceInSeconds)) {
+            return false;
+          } else {
+            return true;
+          }
+        };
+
+
+        getFaucetTimestamps(decodedLogs)
+          .then(prevTransfers => {
+            console.log("Previous Faucet:", prevTransfers);
+            resolve(prevTransfers);
+          }).
+          catch(error => {
+            console.error("Error:", error);
+            reject(error);
+          });
+
+
+      } catch (error) {
+        console.error('Error:', error);
+        reject(error);
+      }
+    });
+  };
+
+
+
+
+   // Function to listenForAddressRegisterEvents
+   const listenForAddressRegisterEvents = () => {
+    return new Promise(async (resolve, reject) => {
+      try {
+
+        // Set the parameters for the getPastLogs method
+        const params_IPRegistered= {
+          fromBlock: 0,
+          toBlock: 'latest',
+          address: "0x9de04769ddC87b9196Ed5c9595A9b113F1193b5c",
+          topics: ["0x5bad4487d7b168048a56fc9dcab8014e86f128b0b713f7db167188fc05d844fa"]
+        }
+        const IPRegisteredEvents = await web3.eth.getPastLogs(params_IPRegistered);
+        console.log("IPRegisteredEvents", IPRegisteredEvents);
+
+
+        // decode
+        let decodedLogs_IPRegistered = [];
+        IPRegisteredEvents.forEach(event => {
+
+          console.log("IPRegisteredEvents", event);
+          try {
+            // Decode the log, ensuring proper handling of the BigInt
+            let decodedLog = web3.eth.abi.decodeLog([
+                {
+                  type: 'address',
+                  name: 'owner',
+                  indexed: false
+                },
+                {
+                  type: 'string',
+                  name: 'sha512',
+                  indexed: false
+                },
+            ], event.data); // event.topics.slice(1) removes the first topic (event signature)
+
+            decodedLogs_IPRegistered.push(decodedLog);
+          } catch (error) {
+            console.error("Error decoding Faucet log:", error);
+          }
+        });
+
+        // set previous transfers
+        async function getIPRegisteredEvents(decodedLogs_IPRegistered) {
+          const transfers = await Promise.all(
+            decodedLogs_IPRegistered.map(async item => {
+              if (item.owner.toLowerCase() === IPOnAddress.toLowerCase()) { // Use the correct property name
+                return [item.sha512];
+              }
+              return ""; // Return an empty string if it doesn't match
+            })
+          );
+      
+          console.log("IPRegisteredEvents", transfers);
+  
+          if (transfers.filter(sha512 => sha512 !== "").length > 0 ) {
+            return (
+              <table className="table is-striped is-hoverable is-fullwidth">
+                <thead>
+                  <tr>
+                    <th>First registration on this address</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transfers.filter(sha512 => sha512 !== "").map((sha512, index) => (
+                    <tr key={index}>
+                      <td>{sha512}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table> 
+            );
+          }else {
+            showError("No sha512 registered on this address");
+            reject();
+          }
+        };
+
+        getIPRegisteredEvents(decodedLogs_IPRegistered)
+          .then(registrations => {
+            console.log("IPRegisteredEvents:", registrations);
+            setRegistrationAddresEvents(registrations);
+            resolve();
+          }).
+          catch(error => {
+            console.error("Error:", error);
+            reject(error);
+          });
+
+
+      } catch (error) {
+        console.error('Error:', error);
+        reject(error);
+      }
+    });
+  };
+
+
+
+
+   // Function to listenForTransferEvents
+   const listenForAddressTransferEvents = () => {
+    return new Promise(async (resolve, reject) => {
+      try {
+
+        const params_IPTransferred= {
+          fromBlock: 0,
+          toBlock: 'latest',
+          address: "0x9de04769ddC87b9196Ed5c9595A9b113F1193b5c",
+          topics: ["0xca00f8032cdcf162c969609d82f6c8d2f473b3321c01f6323283abfa6abbdfbc"]
+        }
+        const IPTransferredEvents = await web3.eth.getPastLogs(params_IPTransferred);
+        console.log("IPTransferredEvents", IPTransferredEvents);
+
+        // 
+        //const params_IpDeleted= {
+        //  fromBlock: 0,
+        //  toBlock: 'latest',
+        //  address: "0x9de04769ddC87b9196Ed5c9595A9b113F1193b5c",
+        //  topics: ["0xc3fb6c98272d7a0d5dc26727b61c00ece2e5bf3dbdc0284659e28d441c1ce06c"]
+        //}
+        //const IpDeletedEvents = await web3.eth.getPastLogs(params_IpDeleted);
+        //console.log("IPTransferredEvents", IpDeletedEvents);
+
+        // decode
+        let decodedLogs_IPTransferred = [];
+        IPTransferredEvents.forEach(event => {
+
+          console.log("IPTransferredEvents", event);
+          try {
+            // Decode the log, ensuring proper handling of the BigInt
+            let decodedLog = web3.eth.abi.decodeLog([
+                {
+                  type: 'address',
+                  name: 'from',
+                  indexed: false
+                },
+                {
+                  type: 'address',
+                  name: 'to',
+                  indexed: false
+                },
+                {
+                  type: 'string',
+                  name: 'sha512',
+                  indexed: false
+                },
+                {
+                  type: 'uint256',
+                  name: 'amount',
+                  indexed: false
+                }
+            ], event.data); // event.topics.slice(1) removes the first topic (event signature)
+
+            decodedLogs_IPTransferred.push(decodedLog);
+          } catch (error) {
+            console.error("Error decoding Faucet log:", error);
+          }
+        });
+
+        // set previous transfers
+        async function getIPTransferredEvents(decodedLogs_IPTransferred) {
+          const transfers_from = await Promise.all(
+            decodedLogs_IPTransferred.map(async item => {
+              if (item.from.toLowerCase() === IPOnAddress.toLowerCase()) { // Use the correct property name
+                return [item.sha512];
+              }
+              return ""; // Return an empty string if it doesn't match
+            })
+          );
+          const transfers_to = await Promise.all(
+            decodedLogs_IPTransferred.map(async item => {
+              if (item.to.toLowerCase() === IPOnAddress.toLowerCase()) { // Use the correct property name
+                return [item.sha512];
+              }
+              return ""; // Return an empty string if it doesn't match
+            })
+          );
+          console.log("getIPTransferredEvents_from", transfers_from);
+          console.log("getIPTransferredEvents_to", transfers_to);
+  
+
+          if (transfers_from.filter(sha512 => sha512 !== "").length === 0){
+            transfers_from[0] = "no transfers";
+          } 
+          if (transfers_to.filter(sha512 => sha512 !== "").length  === 0){
+            transfers_to[0] = "no sales";
+          }
+            return (
+              <table className="table is-striped is-hoverable is-fullwidth">
+               <thead>
+                 <tr>
+                   <th>Received via Transfer</th>
+                 </tr>
+               </thead>
+               <tbody>
+                  {transfers_to.filter(sha512 => sha512 !== "").map((sha512, index) => (
+                    <tr key={index}>
+                      <td>{sha512}</td>
+                    </tr>
+                  ))}
+                </tbody>               
+                <thead>
+                  <tr>
+                    <th>Sold via Transfer</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transfers_from.filter(sha512 => sha512 !== "").map((sha512, index) => (
+                    <tr key={index}>
+                      <td>{sha512}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table> 
+            );
+          
+        };
+
+        getIPTransferredEvents(decodedLogs_IPTransferred)
+          .then(registrations => {
+            console.log("IPTransferred:", registrations);
+            setTransferAddresEvents(registrations);
+            resolve();
+          }).
+          catch(error => {
+            console.error("Error:", error);
+            reject(error);
+          });
+
+
+      } catch (error) {
+        console.error('Error:', error);
+        reject(error);
+      }
+    });
+  };
+
+
+
+
+
   // Function to set registration
   const setRegistrationHandler = async () => {
-    
 
-    const correct512 = await check512correct(checkedsha512);
-    if(!correct512){return}
- 
+    console.log("c", registeredsha512);
+    const correct512 = await check512correct(registeredsha512);
+    if (!correct512) { return }
 
-    if (readApproval < registrationPrice) {
-      showError("Approval not sufficient");
+    // check if registered already
+    try {
+      const getCheckedsha512 = await window.ethereum.request({
+        method: "eth_call",
+        params: [
+          {
+            from: accounts[0], // specify the sender
+            to: IPtrade.options.address,
+            data: IPtrade.methods.getIP(registeredsha512).encodeABI(),
+          },
+          "latest",
+        ],
+      });
+      console.log(getCheckedsha512, "ge");
+      const decoded = await web3.eth.abi.decodeParameters(["address", "uint96", "bool"], getCheckedsha512);
+      console.log(decoded[0]);
+      if(decoded[0].length === 42){
+        showError("This SHA512 is already registered");
+        setRegisteredsha512("");
+        return;
+      } 
+      
+    } catch (err) {
+      console.error("Error in getRegisteredIpHandler:", err);
+    }
+
+
+    try {
+      const readApproval = await window.ethereum.request({
+        method: "eth_call",
+        params: [
+          {
+            from: accounts[0], // specify the sender
+            to: IPTContract.options.address,
+            data: IPTContract.methods.readApprovalFor(approveAddress).encodeABI(),
+          },
+          "latest",
+        ],
+      });
+      const decimalValue = web3.utils.hexToNumber(readApproval);
+      if (readApproval === "0x") {
+        showError("Approval not sufficient");
+        return;
+      }
+      if (decimalValue < registrationPrice) {
+        showError("Approval not sufficient");
+        return;
+      }
+    } catch (err) {
+      console.error("Allowance error:", err.data.message);
+      showError(err.data.message);
       return;
     }
 
@@ -366,9 +817,9 @@ const IpTrade = () => {
 
   // Function to get registered IP
   const getRegisteredIpHandler = async () => {
-
+    console.log("c", checkedsha512);
     const correct512 = await check512correct(checkedsha512);
-    if(!correct512){return}
+    if (!correct512) { return }
 
     try {
       const getCheckedsha512 = await window.ethereum.request({
@@ -382,13 +833,14 @@ const IpTrade = () => {
           "latest",
         ],
       });
-
+      
       const decoded = await web3.eth.abi.decodeParameters(["address", "uint96", "bool"], getCheckedsha512);
+      console.log("decoded", decoded);
       const first_registration = new Date(parseInt(decoded[1]) * 1000).toString();
       getCheckedsha512Address(decoded[0]);
       getCheckedsha512FirstRegistration(first_registration);
 
-      listenForEvents();
+      listenForTransferredEvents();
     } catch (err) {
       console.error("Error in getRegisteredIpHandler:", err);
       showError(err.message);
@@ -399,16 +851,64 @@ const IpTrade = () => {
     }
   };
 
+
+
+
+  
+// Function to get registered IP
+const getIPOnAddressHandler = async () => {
+
+  try {
+    if (IPOnAddress.length !== 42){
+      showError("This is probably not a valid address");
+      return;
+    }
+    listenForAddressRegisterEvents();
+    listenForAddressTransferEvents();
+  } catch (err) {
+    console.error("Error in listenForAddressTransferEvents:", err);
+    return;
+  }
+};
+
+
   // Function to set offer
   const setOfferHandler = async () => {
 
 
-    const correct512 = await check512correct(checkedsha512);
-    if(!correct512){return}
+    const correct512 = await check512correct(offeredsha512);
+    if (!correct512) { return }
 
     if (isNaN(offeredPrice) || offeredPrice.length < 1) {
       showError("Please type a whole number as amount");
       return;
+    }
+
+    // check if the seller is the owner
+   // check if registered already
+    try {
+      const getCheckedsha512 = await window.ethereum.request({
+        method: "eth_call",
+        params: [
+          {
+            from: accounts[0], // specify the sender
+            to: IPtrade.options.address,
+            data: IPtrade.methods.getIP(offeredsha512).encodeABI(),
+          },
+          "latest",
+        ],
+      });
+      console.log(getCheckedsha512, "ge");
+      const decoded = await web3.eth.abi.decodeParameters(["address", "uint96", "bool"], getCheckedsha512);
+      console.log("address", decoded[0]);
+      if(decoded[0].toLowerCase() !== accounts[0].toLowerCase()){
+        showError("This SHA512 is not registered under your address");
+        setOfferedsha512("");
+        return;
+      } 
+      
+    } catch (err) {
+      console.error("Error in getRegisteredIpHandler:", err);
     }
 
     try {
@@ -424,8 +924,8 @@ const IpTrade = () => {
         ],
       });
       const decimalValue = web3.utils.hexToNumber(addressBalance);
-      if (decimalValue < offeredPrice) {
-        showError(`The balance of buyer (${decimalValue} IPT) is lower than the requested price: ${offeredPrice} IPT`);
+      if (decimalValue < offeredPrice * decimals) {
+        showError(`The balance of buyer (${decimalValue / decimals} IPT) is lower than the requested price: ${offeredPrice} IPT`);
         return;
       }
     } catch (err) {
@@ -440,7 +940,7 @@ const IpTrade = () => {
           {
             from: accounts[0], // specify the sender
             to: IPtrade.options.address,
-            data: IPtrade.methods.sellerCreatesSalesIntent(offeredsha512, offeredPrice, offeredAddress).encodeABI(),
+            data: IPtrade.methods.sellerCreatesSalesIntent(offeredsha512, offeredPrice * decimals, offeredAddress).encodeABI(),
           },
           "latest",
         ],
@@ -456,8 +956,8 @@ const IpTrade = () => {
   // Function to set buying
   const setBuyingHandler = async () => {
 
-    const correct512 = await check512correct(checkedsha512);
-    if(!correct512){return}
+    const correct512 = await check512correct(buyingsha512);
+    if (!correct512) { return }
 
     if (isNaN(buyingPrice) || buyingPrice.length < 1) {
       showError("Please type a whole number as amount");
@@ -482,9 +982,9 @@ const IpTrade = () => {
         showError("You are not the buyer");
         return;
       }
-      if (Number(decoded[1]) !== Number(buyingPrice)) {
+      if (Number(decoded[1]) !== Number(buyingPrice) * decimals) {
         console.log("buying price", decoded[1]);
-        showError("Not the right buying price, should be:", decoded[1]);
+        showError("Not the right buying price, should be:", decoded[1] / decimals);
         return;
       }
       if (!decoded[3]) {
@@ -510,11 +1010,11 @@ const IpTrade = () => {
         ],
       });
       const decimalValue = web3.utils.hexToNumber(readApproval);
-      if(readApproval === "0x"){
+      if (readApproval === "0x") {
         showError(`Approval 0 is smaller than the agreed price ${buyingPrice}`);
       }
-      else if (decimalValue < buyingPrice) {
-        showError(`Approval ${decimalValue} is smaller than the agreed price ${buyingPrice}`);
+      else if (decimalValue < buyingPrice * decimals) {
+        showError(`Approval ${decimalValue / decimals} is smaller than the agreed price ${buyingPrice}`);
         return;
       }
     } catch (err) {
@@ -536,8 +1036,8 @@ const IpTrade = () => {
         ],
       });
       const decimalValue = web3.utils.hexToNumber(addressBalance);
-      if (decimalValue < buyingPrice) {
-        showError(`The balance of buyer (${decimalValue} IPT) is lower than the requested price: ${buyingPrice} IPT`);
+      if (decimalValue < buyingPrice * decimals) {
+        showError(`The balance of buyer (${decimalValue / decimals} IPT) is lower than the requested price: ${buyingPrice} IPT`);
         return;
       }
     } catch (err) {
@@ -552,7 +1052,7 @@ const IpTrade = () => {
           {
             from: accounts[0], // specify the sender
             to: IPtrade.options.address,
-            data: IPtrade.methods.buyerBuysIP(buyingsha512, buyingPrice, true).encodeABI(),
+            data: IPtrade.methods.buyerBuysIP(buyingsha512, buyingPrice * decimals, true).encodeABI(),
           },
           "latest",
         ],
@@ -577,6 +1077,16 @@ const IpTrade = () => {
   };
 
 
+  const resendTransaction = async () => {
+    try {
+      const tx = await web3.eth.sendTransaction({ from: accounts[0], to: accounts[0], value: 0, nonce: -1 });
+      console.log(tx)
+    } catch (e) {
+      showError('resend failed', e);
+    }
+  }
+
+
   useEffect(() => {
     connectWalletHandler();
   }, []);
@@ -592,6 +1102,7 @@ const IpTrade = () => {
   useEffect(() => {
     getFaucetHandler();
   }, [getFaucetHandler, accounts]);
+
 
   // Function to display error message using toast
   const showError = (message) => {
@@ -634,25 +1145,28 @@ const IpTrade = () => {
   };
 
   // Function to check the sha512 string
-  const check512correct = async(string) =>{
+  const check512correct = async (string) => {
 
-    try{
+    try {
       let error = 0;
+      console.log("string", string);
       if (string.length !== 128) {
+        console.log("length", string.length);
         showError("This is not a valid sha512. The length should be 128 characters.");
         error = 1;
       }
-        
+
       // Test the string against the pattern
       // Define a regular expression pattern for valid hex characters
       const hexPattern = /^[0-9a-fA-F]+$/;
 
-      if (!hexPattern.test(string)){
+      if (!hexPattern.test(string)) {
+        console.log("hex", hexPattern.test(string));
         showError("This is not a valid sha512. It contains illegal characters.")
         error = 1;
       }
 
-      if (error === 1){
+      if (error === 1) {
         getCheckedsha512Address("");
         getCheckedsha512FirstRegistration("");
         setTransferEvent("");
@@ -660,7 +1174,7 @@ const IpTrade = () => {
       }
 
       return true;
-    } catch(err){
+    } catch (err) {
       console.log(err);
     }
   }
@@ -673,8 +1187,8 @@ const IpTrade = () => {
         <div className={styles.container} style={{ display: 'flex', alignItems: 'center' }}>
           <div className="navbar-brand" style={{ color: 'white' }}>
             <div className="content">
-              <h2>IP trade (BETA-test version)</h2>
-              <h4>Register your creative content on chain</h4>
+              <h2>IP trade </h2>
+              <h4>Register your creative content on-chain</h4>
             </div>
           </div>
           <div className={styles.navbarEnd} style={{ width: buttonWidth }}>
@@ -735,25 +1249,35 @@ const IpTrade = () => {
             <div className={styles.container}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <p style={{ marginRight: '10px' }}>Your address: <strong>{`${loading ? " please connect wallet" : accounts[0]}`}</strong></p>
-               
-                  <button
-                    onClick={() => copyToClipboard(loading ? "Address not loaded" : accounts[0])}
-                    className={`button is-outlined is-small`}
-                  >
-                    Copy Address
-                  </button>
-      
+
+                <button
+                  onClick={() => copyToClipboard(loading ? "Address not loaded" : accounts[0])}
+                  className={`button is-outlined is-small`}
+                >
+                  Copy Address
+                </button>
+
               </div>
-              <p>Faucet height: {String(faucet) / 1000000000000000000} IPT</p>
-              <p>Registration price: {String(registrationPrice) / 1000000000000000000} IPT</p>
-              <p>Transfer price: {String(transferPrice) / 1000000000000000000} IPT</p>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+              <p style={{ marginRight: '10px' }}>IPT address: <strong>{IPTAddress}</strong></p>
+              <button
+                  onClick={() => copyToClipboard(loading ? "Address not loaded" : IPTAddress)}
+                  className={`button is-outlined is-small`}
+                >
+                  Copy Address
+                </button>
+                </div>
+
+              <p>Faucet height: {String(faucet) / 1000000000000000000} IPT every {thisLockTime / 86400} days </p>
+              <p>IP Registration : {String(registrationPrice) / 1000000000000000000} IPT</p>
+              <p>IP Transfer : {String(transferPrice) / 1000000000000000000} IPT</p>
             </div>
             <div className={styles.navbarEnd} style={{ width: buttonWidth }}>
               <button
                 onClick={getIPTHandler}
                 className={`button is-outlined is-fullwidth ${loading ? "is-loading" : " "}`}
               >
-                get IPT
+                get IPT here
               </button>
             </div>
           </div>
@@ -844,7 +1368,7 @@ const IpTrade = () => {
       <nav className={styles.whiteBackground}>
         <div className={styles.container}>
           <div>
-            Allowance for address {approveAddress}: {String(readApproval) / 1000000000000000000} IPT
+            Allowance for address {approveAddress}: {String(readApproval) / decimals} IPT
           </div>
         </div>
       </nav>
@@ -880,13 +1404,13 @@ const IpTrade = () => {
         </div>
         <div className={styles.container} style={{ display: 'flex', alignItems: 'center' }}>
           <div style={{ width: '50%' }}>
-            <label htmlFor="registersha512">sha512 string</label>
+            <label htmlFor="registersha512">sha512</label>
             <input
               className="input"
               type="text"
               id="registersha512"
               value={registeredsha512}
-              onChange={(e) => setregisteredsha512(e.target.value)}
+              onChange={(e) => setRegisteredsha512(e.target.value)}
             />
           </div>
           <div className={styles.navbarEnd} style={{ width: buttonWidth }}>
@@ -919,7 +1443,7 @@ const IpTrade = () => {
               type="text"
               id="checksha512"
               value={checkedsha512}
-              onChange={(e) => getCheckedsha512(e.target.value)}
+              onChange={(e) => setCheckedsha512(e.target.value)}
             />
           </div>
           <div className={styles.navbarEnd} style={{ width: buttonWidth }}>
@@ -931,7 +1455,7 @@ const IpTrade = () => {
             </button>
           </div>
         </div>
-        <div className={styles.container}> 
+        <div className={styles.container}>
           <p><strong>Current owner</strong>: {checkedsha512Address}</p>
           <p><strong>First registered at</strong>: {checkedsha512FirstRegistration}</p>{"\n"}
           {transferEvent}
@@ -939,6 +1463,46 @@ const IpTrade = () => {
       </nav>
     );
   };
+
+
+
+   // Component to check my address registrations
+   const addresRegistrations = () => {
+    return (
+      <nav className={styles.whiteBackground}>
+        <div className={styles.container}>
+          <div className="navbar-brand">
+            <h1>sha512 registrations and transfers per address</h1>
+          </div>
+        </div>
+        <div className={styles.container} style={{ display: 'flex', alignItems: 'center' }}>
+          <div style={{ width: '50%' }}>
+            <label htmlFor="IPOnAddress">Address</label>
+            <input
+              className="input"
+              type="text"
+              id="IPOnAddress"
+              value={IPOnAddress}
+              onChange={(e) => setIPOnAddress(e.target.value)}
+            />
+          </div>
+          <div className={styles.navbarEnd} style={{ width: buttonWidth }}>
+            <button
+              onClick={getIPOnAddressHandler}
+              className={`button is-outlined is-fullwidth ${loading ? "is-loading" : ""}`}
+            >
+              check address
+            </button>
+          </div>
+        </div>
+        <div className={styles.container}>
+          {registrationAddresEvents}
+          {transferAddresEvents}
+        </div>
+      </nav>
+    );
+  };
+
 
   // Component to offer IP
   const OfferIP = () => {
@@ -1046,11 +1610,24 @@ const IpTrade = () => {
       <nav className={styles.whiteBackground}>
         <div className={styles.footer}>
           <p>© 2024 SquaredAnt GmbH. All rights reserved.</p>
-          <p>Follow this project on <a href="https://github.com/mmrmas/ipt">Github</a></p>
+          <p>Read the project guide on <a href="https://github.com/mmrmas/mmrmas.github.io">Github</a></p>
         </div>
       </nav>
     );
   };
+
+
+  // non-stanard
+  const resend = () => {
+    return (
+      <button
+        onClick={resendTransaction}
+        className={`button is-outlined is-fullwidth`}
+      >
+        resend
+      </button>
+    )
+  }
 
   // Sidebar component
   const TopBar = ({ onSelect }) => {
@@ -1105,6 +1682,7 @@ const IpTrade = () => {
       {/* Check IP Section */}
       <div id="check">
         {currentView === 'check' && CheckIP()}
+        {currentView === 'check' && addresRegistrations()}
       </div>
 
       {/* Offer IP Section */}
@@ -1113,10 +1691,20 @@ const IpTrade = () => {
         {currentView === 'transfer' && BuyIP()}
       </div>
 
+      {/* Resend */}
+      <div id="resend">
+        {currentView === 'resend' && resend()}
+      </div>
+
       {/* Footer */}
       <Footer />
     </div>
+
   );
+
+
+
+
 };
 
 export default IpTrade;

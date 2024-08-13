@@ -23,10 +23,15 @@ module.exports = {
     hardhat: {
       chainId: 31337,
     },
+    mainnet: {
+      url:process.env.MAINNET_ENDPOINT,
+      accounts:[process.env.PRIVATE_KEY]
+    },
   },
     etherscan: {
     	apiKey: {
-        sepolia: process.env.ETHERSCAN_API_KEY
+        sepolia: process.env.ETHERSCAN_API_KEY,
+        mainnet: process.env.ETHERSCAN_API_KEY
       }
   },
   gasReporter: {

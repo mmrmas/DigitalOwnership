@@ -117,6 +117,7 @@ contract IPtrade is ReentrancyGuard {
         string  sha512
     );
 
+
        /////////////////////
       //   structs        /
      /////////////////////  
@@ -139,6 +140,8 @@ contract IPtrade is ReentrancyGuard {
         bool exists;
     }
 
+
+
       /////////////////////
       //   mappings       /
      /////////////////////  
@@ -153,6 +156,7 @@ contract IPtrade is ReentrancyGuard {
     // onsale: a data frame with hash as keys and onsale info as value, used for 
     // keeping track on which IP is being registered for IP tranfer
     mapping(bytes32 => Onsale) private onsale;
+
 
       /////////////////////
      //   constructor   /
@@ -359,7 +363,7 @@ contract IPtrade is ReentrancyGuard {
         bytes32 sha512 = stringToBytes32(str);
         require(!sha512s[sha512].exists, "is registered");
 
-        // get paid
+        // trasnfer ipt to contract
         depositIPT(registerIPCostIpt, msg.sender, owner); 
 
         // store the sha512 (key) to the address (value)
@@ -503,7 +507,7 @@ contract IPtrade is ReentrancyGuard {
      //  functions       /
     /////////////////////  
 
-    // getIP: Check who is the owner of an IP, need to provide the MD5sum
+    // getIP: Check who is the owner of an IP, need to provide the SHA-512
     function getIP(
         string calldata str) 
     external view returns (IPowner memory) {
@@ -518,7 +522,7 @@ contract IPtrade is ReentrancyGuard {
             );
     }
 
-    // getSalesIntent: Function check if an MD5sum is on sale, need to provide an MD5sum
+    // getSalesIntent: Function check if an SHA-512 is on sale, need to provide an SHA-512
     function getSalesIntent(
         string calldata str
     ) external view returns (Onsale memory) {

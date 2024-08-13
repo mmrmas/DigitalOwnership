@@ -7,7 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "predeploy": "next build",
+    "predeploy": "next build  && npm run copy-files",
+    "copy-files": "cpx ../README.md build/",
     "deploy": "gh-pages -d build --repo https://github.com/mmrmas/mmrmas.github.io.git",
     "lint": "next lint",
     "compile": "solcjs --abi --include-path node_modules/ --base-path . blockchain/contracts/1_IPToken.sol blockchain/contracts/2_IPmanagement.sol --output-dir blockchain/build"
