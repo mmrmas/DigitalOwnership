@@ -6,8 +6,7 @@ import Web3 from 'web3' ;
 //)
 //const web3 = new Web3(provider)
 
-const web3 = new Web3(process.env.ALCHEMY_WS);
-
+const web3 = new Web3(process.env.NEXT_PUBLIC_ALCHEMY_WS_KEY);
 
 
 const abi_token = [

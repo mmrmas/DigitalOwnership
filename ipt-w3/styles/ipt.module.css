@@ -123,4 +123,50 @@
   padding-bottom: 60px; /* Adjust based on your footer height to avoid overlap */
 }
 
+/* Ensure proper CSS specificity by targeting elements inside .markdownBody */
+.markdownBody h1,
+.markdownBody h2,
+.markdownBody h3,
+.markdownBody h4,
+.markdownBody h5,
+.markdownBody h6 {
+  font-weight: bold;
+  margin-top: 24px;
+  color: black;
+}
+
+.markdownBody ul {
+  list-style-type: disc;
+  padding-left: 40px;
+}
+
+.markdownBody ol {
+  list-style-type: decimal;
+  padding-left: 40px;
+}
+
+.markdownBody blockquote {
+  border-left: 4px solid #dfe2e5;
+  color: #6a737d;
+  padding: 0 1em;
+  margin: 0;
+}
+
+.markdownBody pre {
+  background-color: #f6f8fa;
+  padding: 16px;
+  border-radius: 6px;
+}
+
+.markdownBody code {
+  background-color: #f6f8fa;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.markdownBody{
+  margin-top: 60px; /* Adjust top margin to prevent overlap */
+  padding: 40px;
+}
+
 

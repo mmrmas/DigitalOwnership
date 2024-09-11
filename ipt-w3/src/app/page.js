@@ -1,6 +1,8 @@
 "use client";
 
 import Head from "next/head.js";
+import { serialize } from 'next-mdx-remote/serialize';
+import { MDXRemote } from 'next-mdx-remote';
 import { useState, useEffect, useCallback } from "react";
 import { Web3 } from 'web3';
 import contracts from "../../blockchain/iptest.js"; //
@@ -45,6 +47,7 @@ const IpTrade = () => {
   const [IPOnAddress, setIPOnAddress] = useState("");
   const [transferAddresEvents, setTransferAddresEvents] = useState("");
   const [registrationAddresEvents, setRegistrationAddresEvents] = useState("");
+  const [mdxContent, setMdxContent] = useState(null);
 
 
 
@@ -52,27 +55,32 @@ const IpTrade = () => {
 
   const connectWalletHandler = async () => {
     console.log("connect wallet");
-    if (typeof window !== "undefined" && typeof window.ethereum !== "undefined") {
-      let provider = window.ethereum;
-      if (window.ethereum.providers?.length) {
-        window.ethereum.providers.forEach(async (p) => {
-          if (p.isMetaMask) provider = p;
+      if (typeof window !== "undefined" && typeof window.ethereum !== "undefined") {
+        let provider = window.ethereum;
+        if (window.ethereum.providers?.length) {
+          window.ethereum.providers.forEach(async (p) => {
+            if (p.isMetaMask) provider = p;
+          });
+        } 
+
+        let accounts = await provider.request({
+          method: "eth_requestAccounts",
+          params: [],
         });
+        setAccounts(accounts);
+
+
+        let web3 = new Web3(window.ethereum);
+        setWeb3(web3);
+        setLoading(false);
+
+        console.log("MetaMask is installed!");
+      } else {
+        console.log("Please install Metamask");
+        showError("Please install Metamask");
+        return;
       }
-      let accounts = await provider.request({
-        method: "eth_requestAccounts",
-        params: [],
-      });
-      setAccounts(accounts);
 
-      let web3 = new Web3(window.ethereum);
-      setWeb3(web3);
-      setLoading(false);
-
-      console.log("MetaMask is installed!");
-    } else {
-      console.log("Please install Metamask");
-    }
   };
 
 
@@ -223,7 +231,8 @@ const IpTrade = () => {
 
 
     } catch (err) {
-      showError(err.toString());
+     // showError(err.toString());
+      showError("Failed to load faucet info");
     }
   }, [accounts]);
 
@@ -271,7 +280,7 @@ const IpTrade = () => {
       const params = {
         fromBlock: 0,
         toBlock: 'latest',
-        address: "0x9de04769ddC87b9196Ed5c9595A9b113F1193b5c",
+        address: "0x9BadAa81fF2748b44A272D5957CD631E0B4021aA",
         topics: ["0xca00f8032cdcf162c969609d82f6c8d2f473b3321c01f6323283abfa6abbdfbc"]
       };
 
@@ -388,7 +397,7 @@ const IpTrade = () => {
         const params = {
           fromBlock: 0,
           toBlock: 'latest',
-          address: "0x9de04769ddC87b9196Ed5c9595A9b113F1193b5c",
+          address: "0x9BadAa81fF2748b44A272D5957CD631E0B4021aA",
           topics: ["0xc3fb6c98272d7a0d5dc26727b61c00ece2e5bf3dbdc0284659e28d441c1ce06c"]
         };
 
@@ -500,7 +509,7 @@ const IpTrade = () => {
         const params_IPRegistered= {
           fromBlock: 0,
           toBlock: 'latest',
-          address: "0x9de04769ddC87b9196Ed5c9595A9b113F1193b5c",
+          address: "0x9BadAa81fF2748b44A272D5957CD631E0B4021aA",
           topics: ["0x5bad4487d7b168048a56fc9dcab8014e86f128b0b713f7db167188fc05d844fa"]
         }
         const IPRegisteredEvents = await web3.eth.getPastLogs(params_IPRegistered);
@@ -599,7 +608,7 @@ const IpTrade = () => {
         const params_IPTransferred= {
           fromBlock: 0,
           toBlock: 'latest',
-          address: "0x9de04769ddC87b9196Ed5c9595A9b113F1193b5c",
+          address: "0x9BadAa81fF2748b44A272D5957CD631E0B4021aA",
           topics: ["0xca00f8032cdcf162c969609d82f6c8d2f473b3321c01f6323283abfa6abbdfbc"]
         }
         const IPTransferredEvents = await web3.eth.getPastLogs(params_IPTransferred);
@@ -1180,6 +1189,20 @@ const getIPOnAddressHandler = async () => {
   }
 
 
+  // Function to get whitepaper
+  useEffect(() => {
+    const fetchMarkdown = async () => {
+      const res = await fetch('/whitepaper.md'); // Fetch from the public directory
+      const markdown = await res.text();
+      const mdxSource = await serialize(markdown);
+      setMdxContent(mdxSource);
+    };
+
+    fetchMarkdown();
+  }, []);
+
+
+
   // Component to connect wallet
   const ConnectWallet = () => {
     return (
@@ -1604,13 +1627,21 @@ const getIPOnAddressHandler = async () => {
     );
   };
 
+  // whitepaper
+  const whitePaper = () => {
+    return (
+      <div className={styles.markdownBody}>
+         {mdxContent ? <MDXRemote {...mdxContent} /> : <p>Loading...</p>}
+      </div>
+    );
+  }
+
   // Component for footer
   const Footer = () => {
     return (
       <nav className={styles.whiteBackground}>
         <div className={styles.footer}>
           <p>© 2024 SquaredAnt GmbH. All rights reserved.</p>
-          <p>Read the project guide on <a href="https://github.com/mmrmas/mmrmas.github.io">Github</a></p>
         </div>
       </nav>
     );
@@ -1643,6 +1674,7 @@ const getIPOnAddressHandler = async () => {
         <a href="#" data-id="register" onClick={handleClick}>Register IP</a>
         <a href="#" data-id="check" onClick={handleClick}>Check IP</a>
         <a href="#" data-id="transfer" onClick={handleClick}>Transfer IP</a>
+        <a href="#" data-id="wp" onClick={handleClick}>Whitepaper</a>
       </div>
     );
   };
@@ -1693,8 +1725,14 @@ const getIPOnAddressHandler = async () => {
 
       {/* Resend */}
       <div id="resend">
-        {currentView === 'resend' && resend()}
+        {currentView === 'wp' && whitePaper()}
       </div>
+
+      {/* Whitepaper */}
+      <div id = "wp">
+      {currentView === 'resend' && resend()}
+      </div>
+
 
       {/* Footer */}
       <Footer />
