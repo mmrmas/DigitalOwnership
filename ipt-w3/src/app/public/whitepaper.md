@@ -23,13 +23,13 @@ IPtrade has been designed to safeguard these important integrity aspects of data
 ## Use-cases
 The simplest use-case of IPtrade is the validation of a received document. This can be helpful in the context of communicating important information, where the sender wants to allow the receiver to verify the origin of the document. Examples are: medical information, financial documents, signed contracts, graduation documents, digital IDs.
 
-### Validation can be achieved when:
+Validation can be achieved when:
 
 -  Holders of IPT can register the SHA-512 hash of a document under a wallet address that belongs to them. 
 	-  A SHA-512 hash that is registered in the blockchain under the user's wallet address serves as proof that the owner has access to a document that can produce this hash.
 	- It is recommended to embed the registration address inside the document, as an additional layer of proof that the first registration of the document took place on the logged address.
 
-### The workflow is as follows:
+The workflow is as follows:
 
 	1. Create a document (if possible, include the registration address inside the document)
 	2. Create a SHA-512 hash with this document
@@ -40,12 +40,12 @@ The simplest use-case of IPtrade is the validation of a received document. This 
 
 A second use-case is the creation of content, followed by ownership transfer. This way, a creator secures the arrival of their original content, and subsequently transfers the ownership to the receiver. This can be applied when creating original artistic works, where an artist can establish traceability and the client can certify the origin of the work; tracing and trading of digitized products such as art and graphic design; IP management of innovations and discoveries, such as software code and genomic sequences.
 
-### Ownership transfer can be achieved, after logging the SHA-512, as follows:
+Ownership transfer can be achieved, after logging the SHA-512, as follows:
 
 - Transfer is initiated by the original owner / creator, who makes an offer to a buyer's wallet address. 
 - The buyer can then complete the transaction by transferring an agreed amount of IPT, via IPtrade, to the wallet of the original owner, and has 7 days to do so.
 
-----
+
 > **How to create an SHA-512 hash from a document.**
 > 
 > An SHA-512 hash can be easily obtained on your own device.
@@ -57,7 +57,7 @@ A second use-case is the creation of content, followed by ownership transfer. Th
 > - Some websites may offer this service. Be cautious to share sensitive data online
 > 
 > ***The result is a 128-character string that looks as follows: 71ab8abcd670ef62a1f47dd2a24b17e7025c5fd0a1365dda0dd7cb6d4c5fc7ee9f9ce2981ad64e1f6b77999bcc065912ebf4ee71d5776edc4c3fdba30341d323***
-----
+ 
 
 ## Best practices 
 - Register SHA-512 hashes of documents that are not intended to modify, such as pdf files, zip/tar archives, images. 
@@ -188,6 +188,5 @@ IPtrade.connect(BUYER-ADDRESS).buyerBuysIP(SHA-512,TRANSFER-PRICE-IPT);
 - getSalesIntent(SHA-512)
 
 
-## Contact and Support
-Updates and queries can be posted on the [github account](https://github.com/mmrmas/mmrmas.github.io)  
-You can also reach out via LinkedIn: [LinkedIn](https://www.linkedin.com/in/sam-linsen/)
+## Support
+Updates and queries can be posted on the [github account](https://github.com/mmrmas/mmrmas.github.io)
