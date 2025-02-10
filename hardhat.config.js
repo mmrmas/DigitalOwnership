@@ -22,18 +22,25 @@ module.exports = {
     },
     hardhat: {
       chainId: 31337,
+      loggingEnabled: false // Enable Hardhat logging
     },
     mainnet: {
       url:process.env.MAINNET_ENDPOINT,
       accounts:[process.env.PRIVATE_KEY]
     },
+    sepolia_arb:{
+      url:process.env.SEPOLIA_ENDPOINT,
+      accounts:[process.env.PRIVATE_KEY_ARB]
+    }
   },
     etherscan: {
     	apiKey: {
         sepolia: process.env.ETHERSCAN_API_KEY,
         mainnet: process.env.ETHERSCAN_API_KEY
       }
-  },
+    },
+
+
   gasReporter: {
     enabled: true,
     currency: 'USD',

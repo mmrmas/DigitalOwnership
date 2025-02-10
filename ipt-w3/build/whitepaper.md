@@ -1,7 +1,7 @@
 # IPtrade: an on-chain content ownership tracking platform
 ## driven by IPT, the ownership token
 
- The smart contract **IPtrade** (0x9BadAa81fF2748b44A272D5957CD631E0B4021aA) registers and trades ownership for digital and digitized content. IPtrade registers content in the form of a cryptographic fingerprint to a wallet address on the blockchain. It runs on **IPT** (0xAb6bEda66d62e3fB053767646acb2B3f384dCdC0), the ownership token. This document introduces IPT together with IPtrade. Developments will be published on [github](https://github.com/mmrmas/mmrmas.github.io) and can be approached through [web3](https://ipt.squaredant.com/index.html)
+ The smart contract **IPtrade** (0x9BadAa81fF2748b44A272D5957CD631E0B4021aA) registers and trades ownership for digital and digitized content. IPtrade registers content in the form of a cryptographic fingerprint to a wallet address on the blockchain. It runs on **IPT** (0xAb6bEda66d62e3fB053767646acb2B3f384dCdC0), the ownership token. This document introduces IPT together with IPtrade. Developments will be published on [github](https://github.com/mmrmas/IPT/discussions) and the contract can be approached through [web3](https://ipt.squaredant.com/index.html)
 
 ## TL;DR
 - IPtrade registers SHA-512 hashes under ERC20 compatible wallet addresses. 
@@ -79,7 +79,7 @@ A second use-case is the creation of content, followed by ownership transfer. Th
 
 ## A note on patents and trademarks
 Patents and trademarks require originality and therefore the IP related to patent and trademark registrations should not be available in the public domain before such a status has been granted. IPtrade is primarily aimed at content and ownership validation of shared documents; it does and cannot provide patent or trademark status to documents, since such a status is legally provided by regional and international regulations and requirements. 
-The position of blockchain in patent and trademark registration is a developing field and it is therefore unclear if IPtrade-registered hashes can play a role in it. Time-stamped registration of RSHA-512 hashes has the potential to add value in this process, for those who need to provide evidence for the moment of conception of an original idea to get an appliction granted; or for those who try to avoid the exploitation of their own IP by others.  
+The position of blockchain in patent and trademark registration is a developing field and it is therefore unclear if IPtrade-registered hashes can play a role in it. Time-stamped registration of SHA-512 hashes has the potential to add value in this process, for those who need to provide evidence for the moment of conception of an original idea to get an appliction granted; or for those who try to avoid the exploitation of their own IP by others.  
 
 
 ## Project key characteristics
@@ -189,5 +189,5 @@ IPtrade.connect(BUYER-ADDRESS).buyerBuysIP(SHA-512,TRANSFER-PRICE-IPT);
 
 
 ## Contact and Support
-Updates and queries can be posted on the [github account](https://github.com/mmrmas/mmrmas.github.io)  
+Updates and queries can be posted on the [github account](https://github.com/mmrmas/IPT/discussions)  
 You can also reach out via LinkedIn: [LinkedIn](https://www.linkedin.com/in/sam-linsen/)
