@@ -1,0 +1,247 @@
+.main {
+  color: #333;
+  background-color: var(--background-color); /* Light background for a modern look */
+  font-family: 'Roboto', Arial, Helvetica, sans-serif; /* Use Google Fonts */
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+}
+
+.main h1, .main h2, .main h4 {
+  font-family: 'Poppins', Arial, sans-serif; /* Stylish header font */
+  font-weight: bold;
+}
+
+.main h1 {
+  font-size: 2.5rem;
+  color:  var(--primary-color);
+}
+
+.main h2 {
+  font-size: 2rem;
+  color: var(--secondary-color);
+}
+
+.main h4 {
+  font-size: 1.5rem;
+  color:  var(--secondary-color);
+}
+
+
+  /* ipt.module.css */
+.whiteBackground {
+    background-color: var(--background-color);
+    color: black;
+  }
+  
+  .input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid var(--light-gray);
+    border-radius: 5px;
+    font-size: 16px;
+    transition: border-color 0.3s ease-in-out;
+  }
+  
+  .input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.3);
+  }
+  
+  
+  .help {
+    color: #ccc; /* Change the color of help text */
+    font-size: 12px; /* Adjust the font size of help text */
+  }
+
+  .navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background-color:  var(--primary-color);
+    padding: 10px 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .navbar a {
+    color: white;
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-weight: bold;
+    transition:var(--background-color) 0.3s ease-in-out;
+  }
+  
+  .navbar a:hover {
+    background-color: var(--secondary-color);
+  }
+  
+  .navbar-brand h1 {
+    margin: 0; /* Remove margin from h1 elements */
+  }
+
+  .navbarEnd{
+    margin-left: auto ;
+  }
+
+  .container {
+    margin-left: 40px;
+    margin-right:40px;
+    margin-top:  10px;
+    padding: 10px;
+  }
+
+  .dropdowncontainer {
+    position: relative;
+  }
+  
+  .dropdowncontent {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease-out;
+  }
+  
+  .dropdowncontent.visible {
+    max-height: 500px; /* Adjust the value based on your content height */
+  }
+
+
+  .topbar {
+    width: 100%;
+    background-color: #000; /* Adjust the background color as needed */
+    padding: 10px 40px; /* Top and bottom padding with horizontal padding */
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* This spreads out the navbar content horizontally */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Optional: adds shadow for a slight 3D effect */
+}
+
+.topbar a {
+    color: #fff;
+    text-decoration: none;
+    padding: 10px 15px; /* Padding inside each link for better clickability */
+    font-size: 16px; /* Set the font size for navbar links */
+}
+
+.topbar a:hover {
+    background-color: #333; /* Color change on hover */
+}
+
+.content {
+  margin-top: 60px; /* Adjust top margin to prevent overlap */
+  padding: 20px;
+}
+
+.footer {
+  background-color: var(--background-color);
+  color: black;
+  text-align: center;
+  padding: 20px;
+  font-size: 14px;
+  border-top: 5px solid var(--secondary-color);
+}
+
+.app {
+  min-height: 100vh; /* Full view height */
+  position: relative; /* Context for absolute positioning */
+  padding-bottom: 60px; /* Adjust based on your footer height to avoid overlap */
+}
+
+/* Ensure proper CSS specificity by targeting elements inside .markdownBody */
+.markdownBody h1,
+.markdownBody h2,
+.markdownBody h3,
+.markdownBody h4,
+.markdownBody h5,
+.markdownBody h6 {
+  font-weight: bold;
+  margin-top: 24px;
+  color: black;
+}
+
+.markdownBody ul {
+  list-style-type: disc;
+  padding-left: 40px;
+}
+
+.markdownBody ol {
+  list-style-type: decimal;
+  padding-left: 40px;
+}
+
+.markdownBody blockquote {
+  border-left: 4px solid #dfe2e5;
+  color: #6a737d;
+  padding: 0 1em;
+  margin: 0;
+}
+
+.markdownBody pre {
+  background-color: var(--background-color);
+  padding: 16px;
+  border-radius: 6px;
+}
+
+.markdownBody code {
+  background-color: var(--background-color);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.markdownBody{
+  margin-top: 60px; /* Adjust top margin to prevent overlap */
+  padding: 40px;
+}
+
+
+@media (max-width: 768px) {
+  .container {
+    margin: 0 10px;
+    padding: 10px;
+  }
+
+  .h1 {
+    font-size: 1.8rem;
+  }
+
+  .h2 {
+    font-size: 1.5rem;
+  }
+
+  .h4 {
+    font-size: 1.2rem;
+  }
+
+
+  .button {
+    font-size: 14px;
+    padding: 8px 16px;
+  }
+}
+
+.card {
+  background-color: var(--background-color);
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin-bottom: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card h1, .card h2, .card h4 {
+  color: var(--primary-color);
+}
+
+.card p {
+  color: var(--text-color);
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+

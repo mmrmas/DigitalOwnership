@@ -8,10 +8,12 @@ import { Web3 } from 'web3';
 import contracts from "../../blockchain/iptest.js"; //
 import "bulma/css/bulma.css";
 import styles from "../../styles/ipt.module.css";
+import '../../styles/global.css';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Image from 'next/image.js';
 
+const { Alchemy } = require('alchemy-sdk');
 const IPTContract = contracts.IPTContract;
 const IPTAddress = contracts.IPTContract._address;
 console.log("add", IPTContract);
@@ -20,6 +22,7 @@ const IPtradeAddress = IPtrade.options.address;
 const ethScanUrl = `https://etherscan.io/address/${IPtradeAddress}`;
 const buttonWidth = "15%";
 const decimals = 1000000000000000000;
+
 
 
 const IpTrade = () => {
@@ -31,6 +34,7 @@ const IpTrade = () => {
   const [approveAmount, setApproveAmount] = useState("");
   const [readApproval, setReadApproval] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadingRead, setLoadingRead] = useState(false);
   const [web3, setWeb3] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [registeredsha512, setRegisteredsha512] = useState("");
@@ -52,16 +56,16 @@ const IpTrade = () => {
 
 
 
-
   const connectWalletHandler = async () => {
     console.log("connect wallet");
+    try {
       if (typeof window !== "undefined" && typeof window.ethereum !== "undefined") {
         let provider = window.ethereum;
         if (window.ethereum.providers?.length) {
           window.ethereum.providers.forEach(async (p) => {
             if (p.isMetaMask) provider = p;
           });
-        } 
+        }
 
         let accounts = await provider.request({
           method: "eth_requestAccounts",
@@ -69,17 +73,35 @@ const IpTrade = () => {
         });
         setAccounts(accounts);
 
-
         let web3 = new Web3(window.ethereum);
         setWeb3(web3);
         setLoading(false);
+        setLoadingRead(false);
 
         console.log("MetaMask is installed!");
-      } else {
-        console.log("Please install Metamask");
-        showError("Please install Metamask");
-        return;
+        setCurrentView("approve");
       }
+    } catch (e) {
+      try {
+        // Use  Alchemy as a fallback
+        console.log("fallback");
+        const fallbackProvider = new Web3(
+          new Web3.providers.HttpProvider("https://worldchain-mainnet.g.alchemy.com/v2/5zq4W6KtB5W3j8kmGC1NGbawDglgoiTU")
+        );
+
+        console.log(fallbackProvider);
+        setWeb3(fallbackProvider);
+        setLoadingRead(false);
+
+        console.log("Using fallback provider");
+
+        setCurrentView("check");
+
+        showSuccess("No Metamask connected. Read-only mode");
+      } catch (e) {
+        showError("Connection failed");
+      }
+    }
 
   };
 
@@ -99,9 +121,9 @@ const IpTrade = () => {
     console.log(errorMessage);
     if (match_denied) {
       console.log("Match found:", match_denied[0]);
-  } else {
+    } else {
       console.log("No match found");
-  }
+    }
 
     if (match_address && match_address[0]) {
       console.error('Caught specific error:', match_address[0]);
@@ -231,7 +253,7 @@ const IpTrade = () => {
 
 
     } catch (err) {
-     // showError(err.toString());
+      // showError(err.toString());
       showError("Failed to load faucet info");
     }
   }, [accounts]);
@@ -276,15 +298,24 @@ const IpTrade = () => {
 
       setTransferEvent("No previous owners");
 
+      // set alechemy connection
+      const apikey = '5zq4W6KtB5W3j8kmGC1NGbawDglgoiTU';
+      const settings = {
+        apiKey: apikey,
+        network: 'eth-mainnet',
+      };
+      const alchemy = new Alchemy(settings);
+
+      console.log("alchemy", alchemy);
+
       // Set the parameters for the getPastLogs method
-      const params = {
+      const IPTransferredEvents = await alchemy.core.getLogs({
         fromBlock: 0,
         toBlock: 'latest',
         address: "0x9BadAa81fF2748b44A272D5957CD631E0B4021aA",
         topics: ["0xca00f8032cdcf162c969609d82f6c8d2f473b3321c01f6323283abfa6abbdfbc"]
-      };
+      });
 
-      const IPTransferredEvents = await web3.eth.getPastLogs(params);
       console.log("IPTransferredEvents", IPTransferredEvents);
 
       let decodedLogs = [];
@@ -393,15 +424,23 @@ const IpTrade = () => {
     return new Promise(async (resolve, reject) => {
       try {
 
+        // set alechemy connection
+        const apikey = '5zq4W6KtB5W3j8kmGC1NGbawDglgoiTU';
+        const settings = {
+          apiKey: apikey,
+          network: 'eth-mainnet',
+        };
+        const alchemy = new Alchemy(settings);
+
+
         // Set the parameters for the getPastLogs method
-        const params = {
+        const IPTransferredEvents = await alchemy.core.getLogs({
           fromBlock: 0,
           toBlock: 'latest',
           address: "0x9BadAa81fF2748b44A272D5957CD631E0B4021aA",
           topics: ["0xc3fb6c98272d7a0d5dc26727b61c00ece2e5bf3dbdc0284659e28d441c1ce06c"]
-        };
+        });
 
-        const IPTransferredEvents = await web3.eth.getPastLogs(params);
         console.log("IPTransferredEvents", IPTransferredEvents);
 
         let decodedLogs = [];
@@ -500,19 +539,28 @@ const IpTrade = () => {
 
 
 
-   // Function to listenForAddressRegisterEvents
-   const listenForAddressRegisterEvents = () => {
+  // Function to listenForAddressRegisterEvents
+  const listenForAddressRegisterEvents = () => {
     return new Promise(async (resolve, reject) => {
       try {
 
+
+        // set alechemy connection
+        const apikey = '5zq4W6KtB5W3j8kmGC1NGbawDglgoiTU';
+        const settings = {
+          apiKey: apikey,
+          network: 'eth-mainnet',
+        };
+        const alchemy = new Alchemy(settings);
+
         // Set the parameters for the getPastLogs method
-        const params_IPRegistered= {
-          fromBlock: 0,
+        const IPRegisteredEvents = await alchemy.core.getLogs({
+          fromBlock: 0x0,
           toBlock: 'latest',
           address: "0x9BadAa81fF2748b44A272D5957CD631E0B4021aA",
           topics: ["0x5bad4487d7b168048a56fc9dcab8014e86f128b0b713f7db167188fc05d844fa"]
-        }
-        const IPRegisteredEvents = await web3.eth.getPastLogs(params_IPRegistered);
+        });
+
         console.log("IPRegisteredEvents", IPRegisteredEvents);
 
 
@@ -524,16 +572,16 @@ const IpTrade = () => {
           try {
             // Decode the log, ensuring proper handling of the BigInt
             let decodedLog = web3.eth.abi.decodeLog([
-                {
-                  type: 'address',
-                  name: 'owner',
-                  indexed: false
-                },
-                {
-                  type: 'string',
-                  name: 'sha512',
-                  indexed: false
-                },
+              {
+                type: 'address',
+                name: 'owner',
+                indexed: false
+              },
+              {
+                type: 'string',
+                name: 'sha512',
+                indexed: false
+              },
             ], event.data); // event.topics.slice(1) removes the first topic (event signature)
 
             decodedLogs_IPRegistered.push(decodedLog);
@@ -552,10 +600,10 @@ const IpTrade = () => {
               return ""; // Return an empty string if it doesn't match
             })
           );
-      
+
           console.log("IPRegisteredEvents", transfers);
-  
-          if (transfers.filter(sha512 => sha512 !== "").length > 0 ) {
+
+          if (transfers.filter(sha512 => sha512 !== "").length > 0) {
             return (
               <table className="table is-striped is-hoverable is-fullwidth">
                 <thead>
@@ -570,9 +618,9 @@ const IpTrade = () => {
                     </tr>
                   ))}
                 </tbody>
-              </table> 
+              </table>
             );
-          }else {
+          } else {
             showError("No sha512 registered on this address");
             reject();
           }
@@ -600,18 +648,27 @@ const IpTrade = () => {
 
 
 
-   // Function to listenForTransferEvents
-   const listenForAddressTransferEvents = () => {
+  // Function to listenForTransferEvents
+  const listenForAddressTransferEvents = () => {
     return new Promise(async (resolve, reject) => {
       try {
 
-        const params_IPTransferred= {
+        // set alechemy connection
+        const apikey = '5zq4W6KtB5W3j8kmGC1NGbawDglgoiTU';
+        const settings = {
+          apiKey: apikey,
+          network: 'eth-mainnet',
+        };
+        const alchemy = new Alchemy(settings);
+
+
+        const IPTransferredEvents = await alchemy.core.getLogs({
           fromBlock: 0,
           toBlock: 'latest',
           address: "0x9BadAa81fF2748b44A272D5957CD631E0B4021aA",
           topics: ["0xca00f8032cdcf162c969609d82f6c8d2f473b3321c01f6323283abfa6abbdfbc"]
-        }
-        const IPTransferredEvents = await web3.eth.getPastLogs(params_IPTransferred);
+        });
+
         console.log("IPTransferredEvents", IPTransferredEvents);
 
         // 
@@ -632,26 +689,26 @@ const IpTrade = () => {
           try {
             // Decode the log, ensuring proper handling of the BigInt
             let decodedLog = web3.eth.abi.decodeLog([
-                {
-                  type: 'address',
-                  name: 'from',
-                  indexed: false
-                },
-                {
-                  type: 'address',
-                  name: 'to',
-                  indexed: false
-                },
-                {
-                  type: 'string',
-                  name: 'sha512',
-                  indexed: false
-                },
-                {
-                  type: 'uint256',
-                  name: 'amount',
-                  indexed: false
-                }
+              {
+                type: 'address',
+                name: 'from',
+                indexed: false
+              },
+              {
+                type: 'address',
+                name: 'to',
+                indexed: false
+              },
+              {
+                type: 'string',
+                name: 'sha512',
+                indexed: false
+              },
+              {
+                type: 'uint256',
+                name: 'amount',
+                indexed: false
+              }
             ], event.data); // event.topics.slice(1) removes the first topic (event signature)
 
             decodedLogs_IPTransferred.push(decodedLog);
@@ -680,43 +737,43 @@ const IpTrade = () => {
           );
           console.log("getIPTransferredEvents_from", transfers_from);
           console.log("getIPTransferredEvents_to", transfers_to);
-  
 
-          if (transfers_from.filter(sha512 => sha512 !== "").length === 0){
+
+          if (transfers_from.filter(sha512 => sha512 !== "").length === 0) {
             transfers_from[0] = "no transfers";
-          } 
-          if (transfers_to.filter(sha512 => sha512 !== "").length  === 0){
+          }
+          if (transfers_to.filter(sha512 => sha512 !== "").length === 0) {
             transfers_to[0] = "no sales";
           }
-            return (
-              <table className="table is-striped is-hoverable is-fullwidth">
-               <thead>
-                 <tr>
-                   <th>Received via Transfer</th>
-                 </tr>
-               </thead>
-               <tbody>
-                  {transfers_to.filter(sha512 => sha512 !== "").map((sha512, index) => (
-                    <tr key={index}>
-                      <td>{sha512}</td>
-                    </tr>
-                  ))}
-                </tbody>               
-                <thead>
-                  <tr>
-                    <th>Sold via Transfer</th>
+          return (
+            <table className="table is-striped is-hoverable is-fullwidth">
+              <thead>
+                <tr>
+                  <th>Received via Transfer</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transfers_to.filter(sha512 => sha512 !== "").map((sha512, index) => (
+                  <tr key={index}>
+                    <td>{sha512}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {transfers_from.filter(sha512 => sha512 !== "").map((sha512, index) => (
-                    <tr key={index}>
-                      <td>{sha512}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table> 
-            );
-          
+                ))}
+              </tbody>
+              <thead>
+                <tr>
+                  <th>Sold via Transfer</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transfers_from.filter(sha512 => sha512 !== "").map((sha512, index) => (
+                  <tr key={index}>
+                    <td>{sha512}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          );
+
         };
 
         getIPTransferredEvents(decodedLogs_IPTransferred)
@@ -747,33 +804,11 @@ const IpTrade = () => {
 
     console.log("c", registeredsha512);
     const correct512 = await check512correct(registeredsha512);
+    console.log("this is a SHA-512 string");
     if (!correct512) { return }
 
-    // check if registered already
-    try {
-      const getCheckedsha512 = await window.ethereum.request({
-        method: "eth_call",
-        params: [
-          {
-            from: accounts[0], // specify the sender
-            to: IPtrade.options.address,
-            data: IPtrade.methods.getIP(registeredsha512).encodeABI(),
-          },
-          "latest",
-        ],
-      });
-      console.log(getCheckedsha512, "ge");
-      const decoded = await web3.eth.abi.decodeParameters(["address", "uint96", "bool"], getCheckedsha512);
-      console.log(decoded[0]);
-      if(decoded[0].length === 42){
-        showError("This SHA512 is already registered");
-        setRegisteredsha512("");
-        return;
-      } 
-      
-    } catch (err) {
-      console.error("Error in getRegisteredIpHandler:", err);
-    }
+    // check if the IP is registered 
+    checkIfRegistered();
 
 
     try {
@@ -835,14 +870,16 @@ const IpTrade = () => {
         method: "eth_call",
         params: [
           {
-            from: accounts[0], // specify the sender
+            //from: accounts[0], // specify the sender
             to: IPtrade.options.address,
             data: IPtrade.methods.getIP(checkedsha512).encodeABI(),
           },
           "latest",
         ],
       });
-      
+
+      console.log("getCheckedsha512", getCheckedsha512);
+
       const decoded = await web3.eth.abi.decodeParameters(["address", "uint96", "bool"], getCheckedsha512);
       console.log("decoded", decoded);
       const first_registration = new Date(parseInt(decoded[1]) * 1000).toString();
@@ -863,22 +900,22 @@ const IpTrade = () => {
 
 
 
-  
-// Function to get registered IP
-const getIPOnAddressHandler = async () => {
 
-  try {
-    if (IPOnAddress.length !== 42){
-      showError("This is probably not a valid address");
+  // Function to get registered IP
+  const getIPOnAddressHandler = async () => {
+
+    try {
+      if (IPOnAddress.length !== 42) {
+        showError("This is probably not a valid address");
+        return;
+      }
+      listenForAddressRegisterEvents();
+      listenForAddressTransferEvents();
+    } catch (err) {
+      console.error("Error in listenForAddressTransferEvents:", err);
       return;
     }
-    listenForAddressRegisterEvents();
-    listenForAddressTransferEvents();
-  } catch (err) {
-    console.error("Error in listenForAddressTransferEvents:", err);
-    return;
-  }
-};
+  };
 
 
   // Function to set offer
@@ -894,7 +931,7 @@ const getIPOnAddressHandler = async () => {
     }
 
     // check if the seller is the owner
-   // check if registered already
+    // check if registered already
     try {
       const getCheckedsha512 = await window.ethereum.request({
         method: "eth_call",
@@ -910,12 +947,12 @@ const getIPOnAddressHandler = async () => {
       console.log(getCheckedsha512, "ge");
       const decoded = await web3.eth.abi.decodeParameters(["address", "uint96", "bool"], getCheckedsha512);
       console.log("address", decoded[0]);
-      if(decoded[0].toLowerCase() !== accounts[0].toLowerCase()){
+      if (decoded[0].toLowerCase() !== accounts[0].toLowerCase()) {
         showError("This SHA512 is not registered under your address");
         setOfferedsha512("");
         return;
-      } 
-      
+      }
+
     } catch (err) {
       console.error("Error in getRegisteredIpHandler:", err);
     }
@@ -1188,6 +1225,57 @@ const getIPOnAddressHandler = async () => {
     }
   }
 
+  // check if registered already
+  async function checkIfRegistered() {
+    let getCheckedsha512;
+
+    try {
+      getCheckedsha512 = await window.ethereum.request({
+        method: "eth_call",
+        params: [
+          {
+            from: accounts[0], // specify the sender
+            to: IPtrade.options.address,
+            data: IPtrade.methods.getIP(registeredsha512).encodeABI(),
+          },
+          "latest",
+        ],
+      });
+
+      if (!getCheckedsha512 || getCheckedsha512 === "0x") {
+        console.log("Revert or empty response detected, continuing execution.");
+        return; // Continue script execution here without breaking the flow
+      }
+
+      // If we have a valid response, decode it
+      const decoded = await web3.eth.abi.decodeParameters(
+        ["address", "uint96", "bool"],
+        getCheckedsha512
+      );
+
+      console.log(decoded[0]);
+
+      // Check if the returned address is valid
+      if (decoded[0].length === 42) {
+        showError("This SHA512 is already registered");
+        setRegisteredsha512("");
+        return; // Stop further execution as the hash is already registered
+      }
+
+    } catch (err) {
+      // Log the error and continue
+      console.error("No registration of this SHAsum:", err);
+
+
+    }
+
+    // Other operations will still be executed even if the try block fails
+    console.log("Script continues after catch block.");
+  }
+
+
+
+
 
   // Function to get whitepaper
   useEffect(() => {
@@ -1253,6 +1341,7 @@ const getIPOnAddressHandler = async () => {
       );
     }
     return (
+      <div className={styles.card}>
       <nav className={styles.whiteBackground}>
         <div className={styles.container}>
           <div className="navbar-brand">
@@ -1261,7 +1350,7 @@ const getIPOnAddressHandler = async () => {
           <div className={styles.navbarEnd}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <div style={{ marginRight: '10px', width: buttonWidth }}>
-                <button
+                <button 
                   onClick={() => window.open(ethScanUrl, '_blank')}
                   className={`button is-outlined is-small`}
                 >
@@ -1282,14 +1371,14 @@ const getIPOnAddressHandler = async () => {
 
               </div>
               <div style={{ display: 'flex', alignItems: 'center' }}>
-              <p style={{ marginRight: '10px' }}>IPT address: <strong>{IPTAddress}</strong></p>
-              <button
+                <p style={{ marginRight: '10px' }}>IPT address: <strong>{IPTAddress}</strong></p>
+                <button
                   onClick={() => copyToClipboard(loading ? "Address not loaded" : IPTAddress)}
                   className={`button is-outlined is-small`}
                 >
                   Copy Address
                 </button>
-                </div>
+              </div>
 
               <p>Faucet height: {String(faucet) / 1000000000000000000} IPT every {thisLockTime / 86400} days </p>
               <p>IP Registration : {String(registrationPrice) / 1000000000000000000} IPT</p>
@@ -1306,16 +1395,18 @@ const getIPOnAddressHandler = async () => {
           </div>
         </div>
       </nav>
+      </div>
     );
   };
 
   // Component to display approval form
   const Approval = () => {
     return (
+      <div className={styles.card}>
       <nav className={styles.whiteBackground}>
         <div className={styles.container}>
           <div className="navbar-brand">
-            <div className="content">
+            <div className={styles.container}>
               <h1>Set allowance</h1>
             </div>
           </div>
@@ -1382,12 +1473,8 @@ const getIPOnAddressHandler = async () => {
           </div>
         </div>
       </nav>
-    );
-  };
+      
 
-  // Component to display allowance
-  const Allowance = () => {
-    return (
       <nav className={styles.whiteBackground}>
         <div className={styles.container}>
           <div>
@@ -1395,12 +1482,7 @@ const getIPOnAddressHandler = async () => {
           </div>
         </div>
       </nav>
-    );
-  };
 
-  // Component to revoke approval
-  const RevokeApproval = () => {
-    return (
       <nav className={styles.whiteBackground}>
         <div className={styles.container}>
           <div className={styles.navbarEnd} style={{ width: buttonWidth }}>
@@ -1413,12 +1495,14 @@ const getIPOnAddressHandler = async () => {
           </div>
         </div>
       </nav>
+      </div>
     );
   };
 
   // Component to register IP
   const RegisterIP = () => {
     return (
+      <div className={styles.card}>
       <nav className={styles.whiteBackground}>
         <div className={styles.container}>
           <div className="navbar-brand">
@@ -1446,12 +1530,14 @@ const getIPOnAddressHandler = async () => {
           </div>
         </div>
       </nav>
+      </div>
     );
   };
 
   // Component to check registered IP
   const CheckIP = () => {
     return (
+      <div className={styles.card}>
       <nav className={styles.whiteBackground}>
         <div className={styles.container}>
           <div className="navbar-brand">
@@ -1472,7 +1558,7 @@ const getIPOnAddressHandler = async () => {
           <div className={styles.navbarEnd} style={{ width: buttonWidth }}>
             <button
               onClick={getRegisteredIpHandler}
-              className={`button is-outlined is-fullwidth ${loading ? "is-loading" : ""}`}
+              className={`button is-outlined is-fullwidth ${loadingRead ? "is-loading" : ""}`}
             >
               check registration
             </button>
@@ -1484,14 +1570,8 @@ const getIPOnAddressHandler = async () => {
           {transferEvent}
         </div>
       </nav>
-    );
-  };
+    
 
-
-
-   // Component to check my address registrations
-   const addresRegistrations = () => {
-    return (
       <nav className={styles.whiteBackground}>
         <div className={styles.container}>
           <div className="navbar-brand">
@@ -1512,7 +1592,7 @@ const getIPOnAddressHandler = async () => {
           <div className={styles.navbarEnd} style={{ width: buttonWidth }}>
             <button
               onClick={getIPOnAddressHandler}
-              className={`button is-outlined is-fullwidth ${loading ? "is-loading" : ""}`}
+              className={`button is-outlined is-fullwidth ${loadingRead ? "is-loading" : ""}`}
             >
               check address
             </button>
@@ -1523,6 +1603,7 @@ const getIPOnAddressHandler = async () => {
           {transferAddresEvents}
         </div>
       </nav>
+      </div>
     );
   };
 
@@ -1530,6 +1611,7 @@ const getIPOnAddressHandler = async () => {
   // Component to offer IP
   const OfferIP = () => {
     return (
+      <div className={styles.card}>
       <nav className={styles.whiteBackground}>
         <div className={styles.container}>
           <div className="navbar-brand">
@@ -1579,12 +1661,7 @@ const getIPOnAddressHandler = async () => {
           </div>
         </div>
       </nav>
-    );
-  };
 
-  // Component to buy IP
-  const BuyIP = () => {
-    return (
       <nav className={styles.whiteBackground}>
         <div className={styles.container}>
           <div className="navbar-brand">
@@ -1624,6 +1701,7 @@ const getIPOnAddressHandler = async () => {
           </div>
         </div>
       </nav>
+      </div>
     );
   };
 
@@ -1631,7 +1709,7 @@ const getIPOnAddressHandler = async () => {
   const whitePaper = () => {
     return (
       <div className={styles.markdownBody}>
-         {mdxContent ? <MDXRemote {...mdxContent} /> : <p>Loading...</p>}
+        {mdxContent ? <MDXRemote {...mdxContent} /> : <p>Loading...</p>}
       </div>
     );
   }
@@ -1669,7 +1747,7 @@ const getIPOnAddressHandler = async () => {
     };
 
     return (
-      <div className={styles.topbar}>
+      <div className={styles.navbar}>
         <a href="#" data-id="approve" onClick={handleClick}>Approve spending</a>
         <a href="#" data-id="register" onClick={handleClick}>Register IP</a>
         <a href="#" data-id="check" onClick={handleClick}>Check IP</a>
@@ -1702,8 +1780,6 @@ const getIPOnAddressHandler = async () => {
       {/* Approve Section */}
       <div id="approve">
         {currentView === 'approve' && Approval()}
-        {currentView === 'approve' && Allowance()}
-        {currentView === 'approve' && RevokeApproval()}
       </div>
 
       {/* Register IP Section */}
@@ -1714,13 +1790,11 @@ const getIPOnAddressHandler = async () => {
       {/* Check IP Section */}
       <div id="check">
         {currentView === 'check' && CheckIP()}
-        {currentView === 'check' && addresRegistrations()}
       </div>
 
       {/* Offer IP Section */}
       <div id="transfer">
         {currentView === 'transfer' && OfferIP()}
-        {currentView === 'transfer' && BuyIP()}
       </div>
 
       {/* Resend */}
@@ -1729,8 +1803,8 @@ const getIPOnAddressHandler = async () => {
       </div>
 
       {/* Whitepaper */}
-      <div id = "wp">
-      {currentView === 'resend' && resend()}
+      <div id="wp">
+        {currentView === 'resend' && resend()}
       </div>
 
 
